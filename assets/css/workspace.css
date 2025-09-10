@@ -1,0 +1,980 @@
+/* 6Lab Tool Workspace Styles */
+
+/* Reset and Base Styles */
+.sixlab-workspace {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: #f0f0f1;
+    z-index: 999999;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    color: #1d2327;
+    overflow: hidden;
+}
+
+/* Header Styles */
+.sixlab-header {
+    background: #fff;
+    border-bottom: 1px solid #c3c4c7;
+    padding: 12px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    z-index: 10;
+    position: relative;
+}
+
+.sixlab-header-left {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.sixlab-lab-title {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 600;
+    color: #1d2327;
+}
+
+.sixlab-session-info {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    font-size: 13px;
+}
+
+.sixlab-provider-badge {
+    background: #007cba;
+    color: #fff;
+    padding: 4px 8px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.sixlab-session-id {
+    color: #646970;
+    font-family: monospace;
+}
+
+.sixlab-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 500;
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+}
+
+.sixlab-status.connected .status-dot {
+    background: #00a32a;
+}
+
+.sixlab-status.disconnected .status-dot {
+    background: #d63638;
+}
+
+.sixlab-status.connecting .status-dot {
+    background: #dba617;
+}
+
+.sixlab-header-right {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.sixlab-timer {
+    font-family: monospace;
+    font-size: 16px;
+    font-weight: 600;
+    color: #1d2327;
+    background: #f6f7f7;
+    padding: 8px 12px;
+    border-radius: 4px;
+}
+
+.sixlab-controls {
+    display: flex;
+    gap: 8px;
+}
+
+/* Button Styles */
+.sixlab-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 500;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.sixlab-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.sixlab-btn:active {
+    transform: translateY(0);
+}
+
+.sixlab-btn-primary {
+    background: #007cba;
+    color: #fff;
+    border-color: #005a87;
+}
+
+.sixlab-btn-primary:hover {
+    background: #005a87;
+}
+
+.sixlab-btn-secondary {
+    background: #f6f7f7;
+    color: #1d2327;
+    border-color: #c3c4c7;
+}
+
+.sixlab-btn-secondary:hover {
+    background: #fff;
+    border-color: #8c8f94;
+}
+
+.sixlab-btn-danger {
+    background: #d63638;
+    color: #fff;
+    border-color: #b32d2e;
+}
+
+.sixlab-btn-danger:hover {
+    background: #b32d2e;
+}
+
+/* Content Layout */
+.sixlab-content {
+    display: grid;
+    grid-template-columns: 1fr 350px;
+    height: calc(100vh - 65px);
+    gap: 1px;
+    background: #c3c4c7;
+}
+
+/* Panel Styles */
+.sixlab-panel {
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.sixlab-panel-header {
+    background: #f6f7f7;
+    border-bottom: 1px solid #c3c4c7;
+    padding: 12px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.sixlab-panel-header h3 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: #1d2327;
+}
+
+.sixlab-panel-controls {
+    display: flex;
+    gap: 4px;
+}
+
+.sixlab-panel-toggle {
+    background: none;
+    border: none;
+    padding: 4px;
+    cursor: pointer;
+    border-radius: 2px;
+    color: #646970;
+}
+
+.sixlab-panel-toggle:hover {
+    background: rgba(0, 0, 0, 0.05);
+    color: #1d2327;
+}
+
+.sixlab-panel-content {
+    flex: 1;
+    overflow: auto;
+    position: relative;
+}
+
+/* Lab Panel Styles */
+.sixlab-lab-panel {
+    position: relative;
+}
+
+.sixlab-iframe-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+}
+
+.sixlab-lab-iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+    background: #fff;
+}
+
+/* Loading Styles */
+.sixlab-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: #646970;
+}
+
+.sixlab-spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #f6f7f7;
+    border-left: 4px solid #007cba;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 16px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+/* Error Styles */
+.sixlab-error-message {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    padding: 40px;
+    text-align: center;
+}
+
+.sixlab-error-icon {
+    font-size: 48px;
+    color: #d63638;
+    margin-bottom: 16px;
+}
+
+.sixlab-error-content h4 {
+    margin: 0 0 8px 0;
+    color: #1d2327;
+}
+
+.sixlab-error-content p {
+    margin: 0 0 20px 0;
+    color: #646970;
+}
+
+/* Instructions Panel */
+.sixlab-instructions-panel {
+    border-left: 1px solid #c3c4c7;
+}
+
+.sixlab-instructions-content {
+    padding: 20px;
+}
+
+.sixlab-instructions-content h1,
+.sixlab-instructions-content h2,
+.sixlab-instructions-content h3,
+.sixlab-instructions-content h4,
+.sixlab-instructions-content h5,
+.sixlab-instructions-content h6 {
+    margin-top: 0;
+    margin-bottom: 12px;
+    color: #1d2327;
+}
+
+.sixlab-instructions-content p {
+    margin-bottom: 16px;
+    line-height: 1.6;
+}
+
+.sixlab-instructions-content code {
+    background: #f6f7f7;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: Monaco, Consolas, "Andale Mono", "DejaVu Sans Mono", monospace;
+    font-size: 13px;
+}
+
+.sixlab-instructions-content pre {
+    background: #f6f7f7;
+    border: 1px solid #c3c4c7;
+    border-radius: 4px;
+    padding: 16px;
+    overflow-x: auto;
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+/* Progress Tracking */
+.sixlab-progress-section {
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #c3c4c7;
+}
+
+.sixlab-progress-section h4 {
+    margin: 0 0 16px 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: #1d2327;
+}
+
+.sixlab-checklist {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.sixlab-checklist-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid #f0f0f1;
+}
+
+.sixlab-checklist-item:last-child {
+    border-bottom: none;
+}
+
+.sixlab-checklist-checkbox {
+    margin-top: 2px;
+}
+
+.sixlab-checklist-text {
+    flex: 1;
+    line-height: 1.5;
+}
+
+.sixlab-checklist-item.completed .sixlab-checklist-text {
+    text-decoration: line-through;
+    color: #646970;
+}
+
+/* AI Chat Widget */
+.sixlab-ai-chat {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 400px;
+    height: 500px;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+    display: flex;
+    flex-direction: column;
+    z-index: 1000;
+    transition: all 0.3s ease;
+}
+
+.sixlab-ai-chat.minimized {
+    height: auto;
+    width: auto;
+    bottom: 20px;
+    right: 20px;
+}
+
+.sixlab-ai-chat.minimized .sixlab-chat-header,
+.sixlab-ai-chat.minimized .sixlab-chat-body {
+    display: none;
+}
+
+.sixlab-chat-header {
+    background: #007cba;
+    color: #fff;
+    padding: 12px 16px;
+    border-radius: 8px 8px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.sixlab-chat-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.sixlab-ai-provider-badge {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 10px;
+    text-transform: uppercase;
+}
+
+.sixlab-chat-controls {
+    display: flex;
+    gap: 4px;
+}
+
+.sixlab-chat-btn {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.8);
+    padding: 4px;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.2s ease;
+}
+
+.sixlab-chat-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+
+.sixlab-chat-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.sixlab-chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.sixlab-chat-message {
+    display: flex;
+    gap: 10px;
+    max-width: 90%;
+}
+
+.sixlab-chat-message.sixlab-user-message {
+    align-self: flex-end;
+    flex-direction: row-reverse;
+}
+
+.sixlab-message-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+}
+
+.sixlab-ai-message .sixlab-message-avatar {
+    background: #007cba;
+    color: #fff;
+}
+
+.sixlab-user-message .sixlab-message-avatar {
+    background: #f6f7f7;
+    color: #1d2327;
+}
+
+.sixlab-message-content {
+    background: #f6f7f7;
+    padding: 12px 16px;
+    border-radius: 12px;
+    position: relative;
+    max-width: 100%;
+}
+
+.sixlab-user-message .sixlab-message-content {
+    background: #007cba;
+    color: #fff;
+}
+
+.sixlab-message-content p {
+    margin: 0;
+    line-height: 1.4;
+}
+
+.sixlab-message-content code {
+    background: rgba(0, 0, 0, 0.1);
+    padding: 2px 4px;
+    border-radius: 3px;
+    font-size: 12px;
+}
+
+.sixlab-user-message .sixlab-message-content code {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.sixlab-message-time {
+    font-size: 11px;
+    color: #646970;
+    margin-top: 4px;
+    text-align: right;
+}
+
+.sixlab-user-message .sixlab-message-time {
+    text-align: left;
+}
+
+.sixlab-chat-input-container {
+    border-top: 1px solid #c3c4c7;
+    padding: 16px;
+}
+
+.sixlab-chat-input-wrapper {
+    display: flex;
+    gap: 8px;
+    align-items: flex-end;
+}
+
+.sixlab-chat-input {
+    flex: 1;
+    border: 1px solid #c3c4c7;
+    border-radius: 20px;
+    padding: 10px 16px;
+    resize: none;
+    max-height: 100px;
+    min-height: 40px;
+    font-family: inherit;
+    font-size: 14px;
+    line-height: 1.4;
+    outline: none;
+    transition: border-color 0.2s ease;
+}
+
+.sixlab-chat-input:focus {
+    border-color: #007cba;
+}
+
+.sixlab-send-btn {
+    width: 40px;
+    height: 40px;
+    border: none;
+    background: #007cba;
+    color: #fff;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.sixlab-send-btn:hover {
+    background: #005a87;
+    transform: scale(1.05);
+}
+
+.sixlab-send-btn:disabled {
+    background: #c3c4c7;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.sixlab-chat-suggestions {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+}
+
+.sixlab-suggestion-btn {
+    background: #f6f7f7;
+    border: 1px solid #c3c4c7;
+    border-radius: 16px;
+    padding: 6px 12px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.sixlab-suggestion-btn:hover {
+    background: #fff;
+    border-color: #007cba;
+    color: #007cba;
+}
+
+/* Chat Toggle Button */
+.sixlab-chat-toggle {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 1000;
+}
+
+.sixlab-chat-toggle-btn {
+    background: #007cba;
+    color: #fff;
+    border: none;
+    padding: 12px 16px;
+    border-radius: 25px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    box-shadow: 0 4px 16px rgba(0, 124, 186, 0.3);
+    transition: all 0.3s ease;
+}
+
+.sixlab-chat-toggle-btn:hover {
+    background: #005a87;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 124, 186, 0.4);
+}
+
+.sixlab-unread-indicator {
+    background: #d63638;
+    color: #fff;
+    border-radius: 50%;
+    width: 18px;
+    height: 18px;
+    font-size: 10px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 4px;
+}
+
+/* Modal Styles */
+.sixlab-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+}
+
+.sixlab-modal-content {
+    background: #fff;
+    border-radius: 8px;
+    max-width: 500px;
+    width: 90%;
+    max-height: 90vh;
+    overflow: auto;
+    box-shadow: 0 16px 64px rgba(0, 0, 0, 0.3);
+}
+
+.sixlab-modal-header {
+    background: #f6f7f7;
+    padding: 16px 20px;
+    border-bottom: 1px solid #c3c4c7;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-radius: 8px 8px 0 0;
+}
+
+.sixlab-modal-header h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #1d2327;
+}
+
+.sixlab-modal-close {
+    background: none;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    color: #646970;
+    padding: 0;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 2px;
+}
+
+.sixlab-modal-close:hover {
+    background: rgba(0, 0, 0, 0.05);
+    color: #1d2327;
+}
+
+.sixlab-modal-body {
+    padding: 20px;
+}
+
+.sixlab-form-group {
+    margin-bottom: 20px;
+}
+
+.sixlab-form-group label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 500;
+    color: #1d2327;
+}
+
+.sixlab-form-group input,
+.sixlab-form-group textarea,
+.sixlab-form-group select {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #c3c4c7;
+    border-radius: 4px;
+    font-size: 14px;
+    font-family: inherit;
+}
+
+.sixlab-form-group input:focus,
+.sixlab-form-group textarea:focus,
+.sixlab-form-group select:focus {
+    outline: none;
+    border-color: #007cba;
+    box-shadow: 0 0 0 1px #007cba;
+}
+
+.sixlab-form-group input[type="checkbox"] {
+    width: auto;
+    margin-right: 8px;
+}
+
+.sixlab-form-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 1px solid #c3c4c7;
+}
+
+/* Loading Overlay */
+.sixlab-loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10001;
+}
+
+.sixlab-loading-content {
+    background: #fff;
+    padding: 40px;
+    border-radius: 8px;
+    text-align: center;
+    box-shadow: 0 16px 64px rgba(0, 0, 0, 0.3);
+}
+
+.sixlab-loading-content .sixlab-spinner {
+    margin-bottom: 20px;
+}
+
+.sixlab-loading-content p {
+    margin: 0;
+    font-size: 16px;
+    color: #1d2327;
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+    .sixlab-content {
+        grid-template-columns: 1fr 300px;
+    }
+    
+    .sixlab-ai-chat {
+        width: 350px;
+    }
+}
+
+@media (max-width: 968px) {
+    .sixlab-content {
+        grid-template-columns: 1fr;
+        grid-template-rows: 1fr auto;
+    }
+    
+    .sixlab-instructions-panel {
+        border-left: none;
+        border-top: 1px solid #c3c4c7;
+        max-height: 300px;
+    }
+    
+    .sixlab-ai-chat {
+        width: 320px;
+        height: 400px;
+    }
+    
+    .sixlab-header {
+        flex-direction: column;
+        gap: 12px;
+        align-items: stretch;
+    }
+    
+    .sixlab-header-left,
+    .sixlab-header-right {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .sixlab-session-info {
+        flex-wrap: wrap;
+    }
+    
+    .sixlab-controls {
+        justify-content: space-between;
+    }
+}
+
+@media (max-width: 640px) {
+    .sixlab-workspace {
+        font-size: 13px;
+    }
+    
+    .sixlab-header {
+        padding: 10px 15px;
+    }
+    
+    .sixlab-lab-title {
+        font-size: 18px;
+    }
+    
+    .sixlab-ai-chat {
+        width: calc(100vw - 40px);
+        height: 350px;
+        bottom: 10px;
+        right: 10px;
+        left: 10px;
+    }
+    
+    .sixlab-chat-toggle {
+        bottom: 10px;
+        right: 10px;
+    }
+    
+    .sixlab-modal-content {
+        margin: 20px;
+        width: calc(100% - 40px);
+    }
+    
+    .sixlab-form-actions {
+        flex-direction: column;
+    }
+    
+    .sixlab-chat-suggestions {
+        flex-direction: column;
+    }
+    
+    .sixlab-controls {
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+    
+    .sixlab-btn {
+        padding: 6px 10px;
+        font-size: 12px;
+    }
+}
+
+/* High Contrast Mode */
+@media (prefers-contrast: high) {
+    .sixlab-workspace {
+        background: #000;
+        color: #fff;
+    }
+    
+    .sixlab-header {
+        background: #fff;
+        color: #000;
+        border-bottom-color: #000;
+    }
+    
+    .sixlab-panel {
+        background: #fff;
+        color: #000;
+    }
+    
+    .sixlab-btn {
+        border-width: 2px;
+    }
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+    .sixlab-workspace *,
+    .sixlab-workspace *::before,
+    .sixlab-workspace *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+    
+    .sixlab-spinner {
+        animation: none;
+        border-left-color: transparent;
+    }
+}
+
+/* Print Styles */
+@media print {
+    .sixlab-workspace {
+        position: static;
+        background: #fff;
+    }
+    
+    .sixlab-header,
+    .sixlab-ai-chat,
+    .sixlab-chat-toggle,
+    .sixlab-modal,
+    .sixlab-loading-overlay {
+        display: none !important;
+    }
+    
+    .sixlab-content {
+        grid-template-columns: 1fr;
+        height: auto;
+    }
+    
+    .sixlab-instructions-content {
+        padding: 0;
+    }
+}
