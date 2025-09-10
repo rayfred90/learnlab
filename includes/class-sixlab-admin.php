@@ -770,10 +770,10 @@ class SixLab_Admin {
             ", $start_date, $end_date)),
             
             'popular_providers' => $wpdb->get_results($wpdb->prepare("
-                SELECT provider_type, COUNT(*) as usage_count
+                SELECT provider, COUNT(*) as usage_count
                 FROM {$sessions_table}
                 WHERE created_at BETWEEN %s AND %s
-                GROUP BY provider_type
+                GROUP BY provider
                 ORDER BY usage_count DESC
                 LIMIT 5
             ", $start_date, $end_date))
