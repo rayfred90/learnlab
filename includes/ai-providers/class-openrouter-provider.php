@@ -733,4 +733,27 @@ class SixLab_OpenRouter_Provider extends SixLab_AI_Provider_Abstract {
         
         return 0.001; // Default fallback
     }
+    
+    /**
+     * Get provider capabilities
+     * 
+     * @return array Array of capability identifiers
+     */
+    public function get_capabilities() {
+        return array(
+            'code_analysis',
+            'configuration_help', 
+            'troubleshooting',
+            'learning_guidance',
+            'concept_explanation',
+            'best_practices',
+            'automated_feedback',
+            'contextual_help',
+            'error_explanation',
+            'hint_generation',
+            'chat_conversation',
+            'multi_language',
+            'streaming_responses'
+        );
+    }
 }
