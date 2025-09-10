@@ -756,4 +756,41 @@ class SixLab_OpenRouter_Provider extends SixLab_AI_Provider_Abstract {
             'streaming_responses'
         );
     }
+    
+    /**
+     * Get prompt templates for admin interface
+     * 
+     * @return array Prompt templates with configuration
+     */
+    public function get_prompt_templates() {
+        $default_prompts = $this->get_default_prompts();
+        
+        return array(
+            'contextual_help' => array(
+                'label' => __('Contextual Help Template', 'sixlab-tool'),
+                'description' => __('Template for providing contextual help during lab steps', 'sixlab-tool'),
+                'default' => $default_prompts['contextual_help']
+            ),
+            'configuration_analysis' => array(
+                'label' => __('Configuration Analysis Template', 'sixlab-tool'),
+                'description' => __('Template for analyzing student configurations', 'sixlab-tool'),
+                'default' => $default_prompts['configuration_analysis']
+            ),
+            'error_explanation' => array(
+                'label' => __('Error Explanation Template', 'sixlab-tool'),
+                'description' => __('Template for explaining errors and providing solutions', 'sixlab-tool'),
+                'default' => $default_prompts['error_explanation']
+            ),
+            'hint_generation' => array(
+                'label' => __('Hint Generation Template', 'sixlab-tool'),
+                'description' => __('Template for generating progressive hints', 'sixlab-tool'),
+                'default' => $default_prompts['hint_generation']
+            ),
+            'chat_response' => array(
+                'label' => __('Chat Response Template', 'sixlab-tool'),
+                'description' => __('Template for chat conversations with students', 'sixlab-tool'),
+                'default' => $default_prompts['chat_response']
+            )
+        );
+    }
 }
