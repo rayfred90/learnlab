@@ -693,8 +693,7 @@ class SixLab_OpenRouter_Provider extends SixLab_AI_Provider_Abstract {
      * @return string Model display name
      */
     public function get_model_name() {
-        $config = $this->get_config();
-        $model = $config['model'] ?? 'openai/gpt-4o-mini';
+        $model = $this->get_config('model', 'openai/gpt-4o-mini');
         
         if (isset($this->supported_models[$model])) {
             return $this->supported_models[$model]['name'];
@@ -709,8 +708,7 @@ class SixLab_OpenRouter_Provider extends SixLab_AI_Provider_Abstract {
      * @return int Context window size in tokens
      */
     public function get_context_limit() {
-        $config = $this->get_config();
-        $model = $config['model'] ?? 'openai/gpt-4o-mini';
+        $model = $this->get_config('model', 'openai/gpt-4o-mini');
         
         if (isset($this->supported_models[$model])) {
             return $this->supported_models[$model]['context_window'];
@@ -725,8 +723,7 @@ class SixLab_OpenRouter_Provider extends SixLab_AI_Provider_Abstract {
      * @return float Cost per 1000 tokens
      */
     public function get_cost_per_1k_tokens() {
-        $config = $this->get_config();
-        $model = $config['model'] ?? 'openai/gpt-4o-mini';
+        $model = $this->get_config('model', 'openai/gpt-4o-mini');
         
         if (isset($this->supported_models[$model])) {
             $costs = $this->supported_models[$model]['cost_per_1k_tokens'];
