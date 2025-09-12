@@ -31,8 +31,11 @@ if (!$session_data) {
 $provider_factory = new SixLab_Provider_Factory();
 $provider = $provider_factory->get_provider($lab_provider);
 
-if (!$provider) {
-    wp_die(__('Lab provider not available.', 'sixlab-tool'));
+if (is_wp_error($provider) || !$provider) {
+    $error_message = is_wp_error($provider) 
+        ? $provider->get_error_message() 
+        : __('Lab provider not available.', 'sixlab-tool');
+    wp_die($error_message);
 }
 
 // Get AI provider if enabled
@@ -43,6 +46,11 @@ $ai_provider = null;
 if ($ai_enabled && $default_ai_provider) {
     $ai_factory = new SixLab_AI_Provider_Factory();
     $ai_provider = $ai_factory->get_provider($default_ai_provider);
+    
+    // Check if AI provider creation failed - don't die, just disable AI
+    if (is_wp_error($ai_provider)) {
+        $ai_provider = null;
+    }
 }
 
 // Enqueue required scripts and styles

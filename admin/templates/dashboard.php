@@ -147,6 +147,7 @@ if (!defined('ABSPATH')) {
                         <th><?php _e('Status', 'sixlab-tool'); ?></th>
                         <th><?php _e('Progress', 'sixlab-tool'); ?></th>
                         <th><?php _e('Created', 'sixlab-tool'); ?></th>
+                        <th><?php _e('Actions', 'sixlab-tool'); ?></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -178,6 +179,18 @@ if (!defined('ABSPATH')) {
                             </td>
                             <td>
                                 <?php echo esc_html(mysql2date('Y/m/d g:i a', $session->created_at)); ?>
+                            </td>
+                            <td>
+                                <?php if (in_array($session->status, ['active', 'started', 'in_progress'])): ?>
+                                    <button type="button" class="button button-small button-secondary stop-session-btn" 
+                                            data-session-id="<?php echo esc_attr($session->id); ?>"
+                                            data-user-name="<?php echo esc_attr($session->user_name ?? 'Unknown'); ?>">
+                                        <i class="dashicons dashicons-no"></i>
+                                        <?php _e('Stop Session', 'sixlab-tool'); ?>
+                                    </button>
+                                <?php else: ?>
+                                    <span class="dashicons dashicons-yes-alt" style="color: #46b450;" title="<?php esc_attr_e('Session Completed', 'sixlab-tool'); ?>"></span>
+                                <?php endif; ?>
                             </td>
                         </tr>
                     <?php endforeach; ?>
@@ -474,4 +487,55 @@ if (!defined('ABSPATH')) {
         justify-content: center;
     }
 }
+
+.stop-session-btn {
+    background-color: #d63638 !important;
+    color: white !important;
+    border-color: #d63638 !important;
+}
+
+.stop-session-btn:hover {
+    background-color: #b32d2e !important;
+    border-color: #b32d2e !important;
+}
 </style>
+
+<script>
+jQuery(document).ready(function($) {
+    // Handle stop session button clicks
+    $('.stop-session-btn').on('click', function() {
+        const sessionId = $(this).data('session-id');
+        const userName = $(this).data('user-name');
+        const button = $(this);
+        
+        if (confirm('<?php esc_js(__('Are you sure you want to stop the lab session for', 'sixlab-tool')); ?> ' + userName + '?')) {
+            button.prop('disabled', true).html('<i class="dashicons dashicons-update"></i> <?php esc_js(__('Stopping...', 'sixlab-tool')); ?>');
+            
+            $.post(ajaxurl, {
+                action: 'sixlab_admin_stop_session',
+                session_id: sessionId,
+                nonce: '<?php echo wp_create_nonce('sixlab_admin_nonce'); ?>'
+            }, function(response) {
+                if (response.success) {
+                    button.closest('tr').find('.sixlab-status-badge')
+                          .removeClass('status-active status-started status-in_progress')
+                          .addClass('status-expired')
+                          .text('<?php esc_js(__('Stopped', 'sixlab-tool')); ?>');
+                    
+                    button.replaceWith('<span class="dashicons dashicons-dismiss" style="color: #d63638;" title="<?php esc_attr_e('Session Stopped', 'sixlab-tool'); ?>"></span>');
+                    
+                    // Show success message
+                    $('<div class="notice notice-success is-dismissible"><p><?php esc_js(__('Lab session stopped successfully.', 'sixlab-tool')); ?></p></div>')
+                        .insertAfter('.wp-header-end').delay(3000).fadeOut();
+                } else {
+                    alert('<?php esc_js(__('Error stopping session:', 'sixlab-tool')); ?> ' + response.data.message);
+                    button.prop('disabled', false).html('<i class="dashicons dashicons-no"></i> <?php esc_js(__('Stop Session', 'sixlab-tool')); ?>');
+                }
+            }).fail(function() {
+                alert('<?php esc_js(__('Network error occurred while stopping the session.', 'sixlab-tool')); ?>');
+                button.prop('disabled', false).html('<i class="dashicons dashicons-no"></i> <?php esc_js(__('Stop Session', 'sixlab-tool')); ?>');
+            });
+        }
+    });
+});
+</script>

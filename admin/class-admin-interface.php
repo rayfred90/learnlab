@@ -57,6 +57,11 @@ class SixLab_Admin_Interface {
                             'callback' => 'render_templates_page'
                         ),
                         array(
+                            'title' => 'Lab Sessions',
+                            'slug' => 'sixlab-sessions',
+                            'callback' => 'render_sessions_page'
+                        ),
+                        array(
                             'title' => 'Analytics',
                             'slug' => 'sixlab-analytics',
                             'callback' => 'render_analytics_page'
@@ -167,6 +172,9 @@ class SixLab_Admin_Interface {
         add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_assets'));
         add_action('wp_ajax_sixlab_get_widget_data', array($this, 'handle_widget_data_request'));
         add_action('wp_ajax_sixlab_dashboard_refresh', array($this, 'handle_dashboard_refresh'));
+        add_action('wp_ajax_sixlab_delete_template', array($this, 'handle_delete_template'));
+        add_action('wp_ajax_sixlab_toggle_template_status', array($this, 'handle_toggle_template_status'));
+        add_action('wp_ajax_sixlab_duplicate_template', array($this, 'handle_duplicate_template'));
     }
     
     /**
@@ -313,7 +321,152 @@ class SixLab_Admin_Interface {
      * Render templates page
      */
     public function render_templates_page() {
-        include plugin_dir_path(__FILE__) . '../admin/views/templates.php';
+        // Process form submissions first
+        $this->process_template_form();
+        
+        // Load templates data
+        global $wpdb;
+        $templates = $wpdb->get_results("
+            SELECT * FROM {$wpdb->prefix}sixlab_lab_templates
+            ORDER BY created_at DESC
+        ");
+        
+        include plugin_dir_path(__FILE__) . '../admin/templates/lab-templates.php';
+    }
+    
+    /**
+     * Process template form submissions
+     */
+    private function process_template_form() {
+        if (!isset($_POST['submit']) || !wp_verify_nonce($_POST['_wpnonce'], 'sixlab_templates_nonce')) {
+            return;
+        }
+        
+        if (!current_user_can('manage_options')) {
+            wp_die(__('Insufficient permissions', 'sixlab-tool'));
+        }
+        
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'sixlab_lab_templates';
+        
+        // Basic template data
+        $template_data = array(
+            'name' => sanitize_text_field($_POST['template_name']),
+            'description' => sanitize_textarea_field($_POST['template_description']),
+            'template_type' => sanitize_text_field($_POST['template_type']),
+            'provider_type' => sanitize_text_field($_POST['provider_type']),
+            'difficulty_level' => sanitize_text_field($_POST['difficulty_level']),
+            'estimated_duration' => intval($_POST['estimated_duration'] ?? 0),
+            'instructions' => wp_kses_post($_POST['instructions'] ?? ''),
+            'tags' => sanitize_text_field($_POST['tags'] ?? ''),
+            'is_active' => isset($_POST['is_active']) ? 1 : 0,
+            'is_featured' => isset($_POST['is_featured']) ? 1 : 0,
+        );
+        
+        // Handle optional date/time fields
+        if (!empty($_POST['lab_start_date'])) {
+            $template_data['lab_start_date'] = sanitize_text_field($_POST['lab_start_date']);
+        }
+        if (!empty($_POST['lab_start_time'])) {
+            $template_data['lab_start_time'] = sanitize_text_field($_POST['lab_start_time']);
+        }
+        if (!empty($_POST['lab_end_date'])) {
+            $template_data['lab_end_date'] = sanitize_text_field($_POST['lab_end_date']);
+        }
+        if (!empty($_POST['lab_end_time'])) {
+            $template_data['lab_end_time'] = sanitize_text_field($_POST['lab_end_time']);
+        }
+        
+        // Handle learning objectives
+        if (!empty($_POST['learning_objectives'])) {
+            $objectives = array_map('trim', explode("\n", $_POST['learning_objectives']));
+            $objectives = array_filter($objectives);
+            $template_data['learning_objectives'] = json_encode($objectives);
+        }
+        
+        // Handle template type specific fields
+        if ($template_data['template_type'] === 'guided') {
+            // Handle guided steps
+            $guided_steps = array();
+            if (isset($_POST['guided_steps']) && is_array($_POST['guided_steps'])) {
+                foreach ($_POST['guided_steps'] as $step) {
+                    if (!empty($step['title'])) {
+                        $guided_steps[] = array(
+                            'title' => sanitize_text_field($step['title']),
+                            'instructions' => wp_kses_post($step['instructions'] ?? ''),
+                            'commands' => sanitize_textarea_field($step['commands'] ?? ''),
+                            'validation' => sanitize_textarea_field($step['validation'] ?? '')
+                        );
+                    }
+                }
+            }
+            $template_data['guided_steps'] = json_encode($guided_steps);
+            
+            if (!empty($_POST['guided_delete_reset_script'])) {
+                $template_data['guided_delete_reset_script'] = wp_kses_post($_POST['guided_delete_reset_script']);
+            }
+            
+        } elseif ($template_data['template_type'] === 'non_guided') {
+            if (!empty($_POST['instructions_content'])) {
+                $template_data['instructions_content'] = wp_kses_post($_POST['instructions_content']);
+            }
+            if (!empty($_POST['startup_script'])) {
+                $template_data['startup_script'] = wp_kses_post($_POST['startup_script']);
+            }
+            if (!empty($_POST['verification_script'])) {
+                $template_data['verification_script'] = wp_kses_post($_POST['verification_script']);
+            }
+            if (!empty($_POST['delete_reset_script'])) {
+                $template_data['delete_reset_script'] = wp_kses_post($_POST['delete_reset_script']);
+            }
+        }
+        
+        $is_edit = isset($_POST['template_id']);
+        
+        if ($is_edit) {
+            // Update existing template
+            $template_id = intval($_POST['template_id']);
+            $template_data['updated_at'] = current_time('mysql');
+            
+            $result = $wpdb->update(
+                $table_name,
+                $template_data,
+                array('id' => $template_id)
+            );
+            
+            if ($result !== false) {
+                add_settings_error('sixlab_templates', 'template_updated',
+                    __('Lab template updated successfully.', 'sixlab-tool'), 'success');
+            } else {
+                add_settings_error('sixlab_templates', 'template_update_error',
+                    __('Error updating lab template.', 'sixlab-tool'), 'error');
+            }
+        } else {
+            // Create new template
+            $template_data['created_at'] = current_time('mysql');
+            $template_data['updated_at'] = current_time('mysql');
+            
+            $result = $wpdb->insert($table_name, $template_data);
+            
+            if ($result !== false) {
+                add_settings_error('sixlab_templates', 'template_created',
+                    __('Lab template created successfully.', 'sixlab-tool'), 'success');
+                    
+                // Redirect to overview page instead to avoid issues
+                wp_redirect(admin_url('admin.php?page=sixlab-templates&tab=overview'));
+                exit;
+            } else {
+                add_settings_error('sixlab_templates', 'template_create_error',
+                    __('Error creating lab template: ' . $wpdb->last_error, 'sixlab-tool'), 'error');
+            }
+        }
+    }
+    
+    /**
+     * Render lab sessions page
+     */
+    public function render_sessions_page() {
+        include plugin_dir_path(__FILE__) . '../admin/templates/lab-sessions.php';
     }
     
     /**
@@ -595,11 +748,131 @@ class SixLab_Admin_Interface {
     
     /**
      * Get admin configuration
-     * 
+     *
      * @return array
      */
     public function get_admin_config() {
         return $this->admin_config;
+    }
+    
+    /**
+     * Handle template deletion AJAX request
+     */
+    public function handle_delete_template() {
+        check_ajax_referer('sixlab_admin', 'nonce');
+        
+        if (!current_user_can('manage_options')) {
+            wp_die(__('Insufficient permissions', 'sixlab-tool'));
+        }
+        
+        $template_id = intval($_POST['template_id'] ?? 0);
+        
+        if (!$template_id) {
+            wp_send_json_error(array('message' => __('Invalid template ID', 'sixlab-tool')));
+        }
+        
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'sixlab_lab_templates';
+        
+        $result = $wpdb->delete(
+            $table_name,
+            array('id' => $template_id),
+            array('%d')
+        );
+        
+        if ($result !== false) {
+            wp_send_json_success(array('message' => __('Template deleted successfully', 'sixlab-tool')));
+        } else {
+            wp_send_json_error(array('message' => __('Failed to delete template', 'sixlab-tool')));
+        }
+    }
+    
+    /**
+     * Handle template status toggle AJAX request
+     */
+    public function handle_toggle_template_status() {
+        check_ajax_referer('sixlab_admin', 'nonce');
+        
+        if (!current_user_can('manage_options')) {
+            wp_die(__('Insufficient permissions', 'sixlab-tool'));
+        }
+        
+        $template_id = intval($_POST['template_id'] ?? 0);
+        $status = sanitize_text_field($_POST['status'] ?? '');
+        
+        if (!$template_id || !in_array($status, array('activate', 'deactivate'))) {
+            wp_send_json_error(array('message' => __('Invalid parameters', 'sixlab-tool')));
+        }
+        
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'sixlab_lab_templates';
+        
+        $is_active = $status === 'activate' ? 1 : 0;
+        
+        $result = $wpdb->update(
+            $table_name,
+            array('is_active' => $is_active),
+            array('id' => $template_id),
+            array('%d'),
+            array('%d')
+        );
+        
+        if ($result !== false) {
+            $message = $status === 'activate' ?
+                __('Template activated successfully', 'sixlab-tool') :
+                __('Template deactivated successfully', 'sixlab-tool');
+            wp_send_json_success(array('message' => $message));
+        } else {
+            wp_send_json_error(array('message' => __('Failed to update template status', 'sixlab-tool')));
+        }
+    }
+    
+    /**
+     * Handle template duplication AJAX request
+     */
+    public function handle_duplicate_template() {
+        check_ajax_referer('sixlab_admin', 'nonce');
+        
+        if (!current_user_can('manage_options')) {
+            wp_die(__('Insufficient permissions', 'sixlab-tool'));
+        }
+        
+        $template_id = intval($_POST['template_id'] ?? 0);
+        
+        if (!$template_id) {
+            wp_send_json_error(array('message' => __('Invalid template ID', 'sixlab-tool')));
+        }
+        
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'sixlab_lab_templates';
+        
+        // Get the original template
+        $original_template = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$table_name} WHERE id = %d",
+            $template_id
+        ), ARRAY_A);
+        
+        if (!$original_template) {
+            wp_send_json_error(array('message' => __('Template not found', 'sixlab-tool')));
+        }
+        
+        // Prepare data for duplication
+        unset($original_template['id']);
+        $original_template['name'] .= ' (Copy)';
+        $original_template['is_active'] = 0; // New copy should be inactive by default
+        $original_template['created_at'] = current_time('mysql');
+        $original_template['updated_at'] = current_time('mysql');
+        
+        $result = $wpdb->insert($table_name, $original_template);
+        
+        if ($result !== false) {
+            wp_send_json_success(array(
+                'message' => __('Template duplicated successfully', 'sixlab-tool'),
+                'new_template_id' => $wpdb->insert_id
+            ));
+        } else {
+            wp_send_json_error(array('message' => __('Failed to duplicate template', 'sixlab-tool')));
+        }
     }
 }
 

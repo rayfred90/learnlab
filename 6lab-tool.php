@@ -95,6 +95,9 @@ function sixlab_activate() {
     require_once SIXLAB_PLUGIN_DIR . 'database/class-sixlab-database.php';
     SixLab_Database::create_tables();
     
+    // Run any pending migrations
+    SixLab_Database::maybe_upgrade('0.8.0'); // Force upgrade from older version to run new migrations
+    
     // Set default options
     add_option('sixlab_version', SIXLAB_PLUGIN_VERSION);
     add_option('sixlab_activation_time', current_time('timestamp'));

@@ -651,3 +651,419 @@
 .widget-content::-webkit-scrollbar-thumb:hover {
     background: var(--sixlab-gray-400);
 }
+
+/* Provider Management Styles */
+.sixlab-configurations-list {
+    background: white;
+    border-radius: var(--sixlab-border-radius);
+    box-shadow: var(--sixlab-shadow);
+    margin-top: 1.5rem;
+    overflow: hidden;
+}
+
+.sixlab-configurations-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--sixlab-gray-200);
+    background: var(--sixlab-gray-50);
+}
+
+.sixlab-configurations-header h3 {
+    margin: 0;
+    color: var(--sixlab-gray-800);
+    font-size: 1.125rem;
+    font-weight: 600;
+}
+
+.sixlab-provider-instances {
+    padding: 1rem;
+}
+
+.sixlab-provider-instance {
+    background: white;
+    border: 1px solid var(--sixlab-gray-200);
+    border-radius: var(--sixlab-border-radius);
+    margin-bottom: 1rem;
+    padding: 1.5rem;
+    transition: all 0.2s ease;
+}
+
+.sixlab-provider-instance:hover {
+    box-shadow: var(--sixlab-shadow);
+    border-color: var(--sixlab-primary-300);
+}
+
+.sixlab-provider-instance.active {
+    border-color: var(--sixlab-success);
+    background: rgba(16, 185, 129, 0.02);
+}
+
+.sixlab-provider-instance.inactive {
+    border-color: var(--sixlab-gray-300);
+    background: var(--sixlab-gray-50);
+    opacity: 0.8;
+}
+
+.sixlab-instance-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.sixlab-instance-header h4 {
+    margin: 0;
+    color: var(--sixlab-gray-800);
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.sixlab-instance-badges {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.sixlab-instance-badges .badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.badge.default {
+    background: var(--sixlab-primary-100);
+    color: var(--sixlab-primary-700);
+}
+
+.badge.active {
+    background: #dcfce7;
+    color: #15803d;
+}
+
+.badge.inactive {
+    background: var(--sixlab-gray-100);
+    color: var(--sixlab-gray-600);
+}
+
+.badge.health.healthy {
+    background: #dcfce7;
+    color: #15803d;
+}
+
+.badge.health.warning {
+    background: #fef3c7;
+    color: #d97706;
+}
+
+.badge.health.error {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+.badge.health.unknown {
+    background: var(--sixlab-gray-100);
+    color: var(--sixlab-gray-600);
+}
+
+.sixlab-instance-info {
+    margin-bottom: 1rem;
+    font-size: 0.875rem;
+    color: var(--sixlab-gray-600);
+}
+
+.sixlab-instance-info p {
+    margin: 0.25rem 0;
+}
+
+.sixlab-instance-info .health-message {
+    padding: 0.5rem;
+    border-radius: 0.25rem;
+    background: var(--sixlab-gray-50);
+    border-left: 4px solid var(--sixlab-gray-300);
+}
+
+.sixlab-instance-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.sixlab-provider-status-info {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.25rem;
+}
+
+.sixlab-active-count {
+    font-size: 0.75rem;
+    color: var(--sixlab-success);
+    font-weight: 500;
+}
+
+.sixlab-configuration-form {
+    background: white;
+    border-radius: var(--sixlab-border-radius);
+    box-shadow: var(--sixlab-shadow);
+    margin-top: 1.5rem;
+    padding: 2rem;
+}
+
+.sixlab-form-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--sixlab-gray-200);
+}
+
+.sixlab-form-header h3 {
+    margin: 0;
+    color: var(--sixlab-gray-800);
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.sixlab-no-configurations {
+    text-align: center;
+    padding: 3rem 2rem;
+    background: white;
+    border-radius: var(--sixlab-border-radius);
+    margin-top: 1.5rem;
+}
+
+.sixlab-no-configurations p {
+    color: var(--sixlab-gray-600);
+    margin-bottom: 1.5rem;
+}
+
+/* Test Result Styles */
+.sixlab-test-result {
+    margin-top: 1rem;
+    padding: 0.75rem 1rem;
+    border-radius: var(--sixlab-border-radius);
+    font-size: 0.875rem;
+}
+
+.sixlab-test-result.success {
+    background: #dcfce7;
+    color: #15803d;
+    border: 1px solid #bbf7d0;
+}
+
+.sixlab-test-result.error {
+    background: #fee2e2;
+    color: #dc2626;
+    border: 1px solid #fecaca;
+}
+
+/* Provider Cards Enhancement */
+.sixlab-provider-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.sixlab-provider-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--sixlab-shadow-lg);
+}
+
+/* Shortcode Container Styles */
+.sixlab-shortcode-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    max-width: 200px;
+}
+
+.sixlab-shortcode {
+    background: var(--sixlab-gray-100);
+    color: var(--sixlab-gray-700);
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 11px;
+    border: 1px solid var(--sixlab-gray-300);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+}
+
+.sixlab-copy-shortcode {
+    min-width: auto !important;
+    padding: 4px 6px !important;
+    height: auto !important;
+    line-height: 1 !important;
+    border-radius: 3px !important;
+    position: relative;
+}
+
+.sixlab-copy-shortcode .dashicons {
+    width: 12px;
+    height: 12px;
+    font-size: 12px;
+}
+
+.sixlab-copy-shortcode:hover {
+    background: var(--sixlab-primary-500) !important;
+    border-color: var(--sixlab-primary-500) !important;
+    color: white !important;
+}
+
+/* Copy success animation */
+.sixlab-copy-success {
+    background: var(--sixlab-success) !important;
+    border-color: var(--sixlab-success) !important;
+    color: white !important;
+}
+
+.sixlab-copy-success::after {
+    content: "✓";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 10px;
+    font-weight: bold;
+}
+
+.sixlab-copy-success .dashicons {
+    opacity: 0;
+}
+
+/* Preview button styling */
+.button .dashicons {
+    vertical-align: text-top;
+    margin-right: 4px;
+}
+
+/* Templates table enhancements */
+.sixlab-templates-list .wp-list-table td {
+    vertical-align: middle;
+    padding: 12px 8px;
+}
+
+.sixlab-templates-list .wp-list-table th {
+    padding: 12px 8px;
+}
+
+/* Responsive table adjustments */
+@media (max-width: 1200px) {
+    .sixlab-shortcode-container {
+        max-width: 150px;
+    }
+    
+    .sixlab-shortcode {
+        font-size: 10px;
+    }
+}
+
+@media (max-width: 782px) {
+    .sixlab-shortcode-container {
+        flex-direction: column;
+        gap: 4px;
+        max-width: 120px;
+    }
+    
+    .sixlab-shortcode {
+        font-size: 9px;
+        padding: 2px 4px;
+    }
+    
+    .sixlab-copy-shortcode {
+        align-self: flex-end;
+    }
+}
+
+/* Toast Notifications */
+.sixlab-toast-container {
+    position: fixed;
+    top: 32px; /* WordPress admin bar height */
+    right: 20px;
+    z-index: 999999;
+    pointer-events: none;
+}
+
+.sixlab-toast {
+    background: var(--sixlab-gray-800);
+    color: white;
+    padding: 12px 16px;
+    border-radius: 6px;
+    margin-bottom: 10px;
+    transform: translateX(400px);
+    opacity: 0;
+    transition: all 0.3s ease;
+    box-shadow: var(--sixlab-shadow-lg);
+    font-size: 14px;
+    max-width: 300px;
+}
+
+.sixlab-toast-show {
+    transform: translateX(0);
+    opacity: 1;
+}
+
+.sixlab-toast-success {
+    background: var(--sixlab-success);
+}
+
+.sixlab-toast-error {
+    background: var(--sixlab-error);
+}
+
+.sixlab-toast-warning {
+    background: var(--sixlab-warning);
+}
+
+/* Duration Fields Styling */
+.duration-fields {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    margin-bottom: 10px;
+}
+
+.duration-field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.duration-field label {
+    font-weight: 600;
+    color: var(--sixlab-gray-700);
+    font-size: 13px;
+    margin-bottom: 2px;
+}
+
+.duration-field input[type="number"],
+.duration-field input[type="date"],
+.duration-field input[type="time"] {
+    padding: 8px 12px;
+    border: 1px solid var(--sixlab-gray-300);
+    border-radius: var(--sixlab-border-radius);
+    font-size: 14px;
+    transition: border-color 0.15s ease-in-out;
+    width: 100%;
+    max-width: 200px;
+}
+
+.duration-field input[type="number"]:focus,
+.duration-field input[type="date"]:focus,
+.duration-field input[type="time"]:focus {
+    outline: none;
+    border-color: var(--sixlab-primary);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+@media (max-width: 768px) {
+    .duration-fields {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+}

@@ -117,7 +117,6 @@ class SixLab_Core {
         add_action('rest_api_init', array($this, 'register_rest_routes'));
         
         // AJAX hooks
-        add_action('wp_ajax_sixlab_start_session', array($this, 'ajax_start_session'));
         add_action('wp_ajax_sixlab_validate_step', array($this, 'ajax_validate_step'));
         add_action('wp_ajax_sixlab_ai_chat', array($this, 'ajax_ai_chat'));
         add_action('wp_ajax_sixlab_end_session', array($this, 'ajax_end_session'));
@@ -126,7 +125,7 @@ class SixLab_Core {
         add_action('learndash_lesson_completed', array($this, 'handle_lesson_completion'), 10, 1);
         add_action('learndash_quiz_completed', array($this, 'handle_quiz_completion'), 10, 2);
         
-        // Custom post type hooks
+        // Custom post types registration
         add_action('init', array($this, 'register_post_types'));
         
         // Enqueue scripts and styles
@@ -135,6 +134,15 @@ class SixLab_Core {
         
         // Shortcode support
         add_action('init', array($this, 'register_shortcodes'));
+        
+        // Custom rewrite rules for lab workspace
+        add_action('init', array($this, 'add_rewrite_rules'));
+        
+        // Template redirect for custom pages
+        add_action('template_redirect', array($this, 'template_redirect'));
+        
+        // Query vars
+        add_filter('query_vars', array($this, 'add_query_vars'));
     }
     
     /**
@@ -159,60 +167,27 @@ class SixLab_Core {
      * WordPress init callback
      */
     public function init() {
-        // Register custom capabilities
+        // Load plugin textdomain
+        load_plugin_textdomain('sixlab-tool', false, dirname(plugin_basename(__FILE__)) . '/languages/');
+        
+        // Add user capabilities
         $this->add_custom_capabilities();
         
-        // Initialize database if needed
+        // Maybe upgrade database
         $this->maybe_upgrade_database();
-    }
-    
-    /**
-     * Register REST API routes
-     */
-    public function register_rest_routes() {
-        // Session management routes
-        register_rest_route('sixlab/v1', '/sessions', array(
-            'methods' => 'POST',
-            'callback' => array($this, 'rest_create_session'),
-            'permission_callback' => array($this, 'check_session_permissions'),
-        ));
-        
-        register_rest_route('sixlab/v1', '/sessions/(?P<id>\d+)', array(
-            'methods' => 'GET',
-            'callback' => array($this, 'rest_get_session'),
-            'permission_callback' => array($this, 'check_session_permissions'),
-        ));
-        
-        register_rest_route('sixlab/v1', '/sessions/(?P<id>\d+)/validate', array(
-            'methods' => 'POST',
-            'callback' => array($this, 'rest_validate_session'),
-            'permission_callback' => array($this, 'check_session_permissions'),
-        ));
-        
-        // AI interaction routes
-        register_rest_route('sixlab/v1', '/ai/chat', array(
-            'methods' => 'POST',
-            'callback' => array($this, 'rest_ai_chat'),
-            'permission_callback' => array($this, 'check_session_permissions'),
-        ));
-        
-        // Provider management routes
-        register_rest_route('sixlab/v1', '/providers', array(
-            'methods' => 'GET',
-            'callback' => array($this, 'rest_get_providers'),
-            'permission_callback' => array($this, 'check_admin_permissions'),
-        ));
     }
     
     /**
      * Register custom post types
      */
     public function register_post_types() {
-        // Lab Template post type
+        // Register Lab Templates post type
         register_post_type('sixlab_template', array(
+            'label' => __('Lab Templates', 'sixlab-tool'),
             'labels' => array(
                 'name' => __('Lab Templates', 'sixlab-tool'),
                 'singular_name' => __('Lab Template', 'sixlab-tool'),
+                'menu_name' => __('Lab Templates', 'sixlab-tool'),
                 'add_new' => __('Add New Template', 'sixlab-tool'),
                 'add_new_item' => __('Add New Lab Template', 'sixlab-tool'),
                 'edit_item' => __('Edit Lab Template', 'sixlab-tool'),
@@ -239,10 +214,11 @@ class SixLab_Core {
     public function register_shortcodes() {
         add_shortcode('sixlab_workspace', array($this->public, 'render_workspace_shortcode'));
         add_shortcode('sixlab_dashboard', array($this->public, 'render_dashboard_shortcode'));
+        add_shortcode('sixlab_template', array($this->public, 'render_template_shortcode'));
+        add_shortcode('sixlab_progress', array($this->public, 'render_progress_shortcode'));
         
         // Legacy shortcode support
         add_shortcode('sixlab_interface', array($this->public, 'render_workspace_shortcode'));
-        add_shortcode('sixlab_progress', array($this->public, 'render_dashboard_shortcode'));
     }
     
     /**
@@ -298,6 +274,29 @@ class SixLab_Core {
     }
     
     /**
+     * Register REST API routes
+     */
+    public function register_rest_routes() {
+        register_rest_route('sixlab/v1', '/sessions', array(
+            'methods' => 'POST',
+            'callback' => array($this, 'rest_create_session'),
+            'permission_callback' => array($this, 'check_session_permissions')
+        ));
+        
+        register_rest_route('sixlab/v1', '/sessions/(?P<id>\d+)', array(
+            'methods' => 'GET',
+            'callback' => array($this, 'rest_get_session'),
+            'permission_callback' => array($this, 'check_session_permissions')
+        ));
+        
+        register_rest_route('sixlab/v1', '/templates', array(
+            'methods' => 'GET',
+            'callback' => array($this, 'rest_get_templates'),
+            'permission_callback' => array($this, 'check_session_permissions')
+        ));
+    }
+    
+    /**
      * Add custom capabilities
      */
     private function add_custom_capabilities() {
@@ -328,7 +327,8 @@ class SixLab_Core {
         return has_shortcode($post->post_content, 'sixlab_interface') || 
                has_shortcode($post->post_content, 'sixlab_progress') ||
                has_shortcode($post->post_content, 'sixlab_workspace') ||
-               has_shortcode($post->post_content, 'sixlab_dashboard');
+               has_shortcode($post->post_content, 'sixlab_dashboard') ||
+               has_shortcode($post->post_content, 'sixlab_template');
     }
     
     /**
@@ -341,28 +341,6 @@ class SixLab_Core {
             SixLab_Database::maybe_upgrade($current_version);
             update_option('sixlab_version', SIXLAB_PLUGIN_VERSION);
         }
-    }
-    
-    /**
-     * AJAX: Start lab session
-     */
-    public function ajax_start_session() {
-        check_ajax_referer('sixlab_nonce', 'nonce');
-        
-        if (!is_user_logged_in()) {
-            wp_die(__('You must be logged in to start a lab session.', 'sixlab-tool'));
-        }
-        
-        $lab_id = intval($_POST['lab_id']);
-        $provider = sanitize_text_field($_POST['provider']);
-        
-        $session = $this->session_manager->create_session(get_current_user_id(), $lab_id, $provider);
-        
-        if (is_wp_error($session)) {
-            wp_send_json_error($session->get_error_message());
-        }
-        
-        wp_send_json_success($session);
     }
     
     /**
@@ -425,20 +403,9 @@ class SixLab_Core {
      */
     public function handle_lesson_completion($data) {
         // Integration with LearnDash lesson completion
-        $user_id = $data['user']->ID;
-        $lesson_id = $data['lesson']->ID;
-        
-        // Check if this lesson has associated lab sessions
-        $sessions = $this->session_manager->get_user_sessions_for_lesson($user_id, $lesson_id);
-        
-        foreach ($sessions as $session) {
-            if ($session['status'] === 'active') {
-                // Auto-complete active sessions when lesson is completed
-                $this->session_manager->complete_session($session['id']);
-            }
-        }
+        // Could trigger automatic lab session start or validation
     }
-    
+
     /**
      * Handle LearnDash quiz completion
      */
@@ -475,5 +442,115 @@ class SixLab_Core {
      */
     public function check_admin_permissions($request) {
         return current_user_can('manage_sixlab');
+    }
+    
+    /**
+     * Add rewrite rules for custom pages
+     */
+    public function add_rewrite_rules() {
+        add_rewrite_rule(
+            '^sixlab-workspace/?$',
+            'index.php?sixlab_page=workspace',
+            'top'
+        );
+        
+        add_rewrite_rule(
+            '^sixlab-preview/?',
+            'index.php?sixlab_page=preview',
+            'top'
+        );
+        
+        add_rewrite_rule(
+            '^sixlab-progress/?$',
+            'index.php?sixlab_page=progress',
+            'top'
+        );
+        
+        // Flush rewrite rules if needed
+        if (get_option('sixlab_rewrite_rules_flushed') !== SIXLAB_PLUGIN_VERSION) {
+            flush_rewrite_rules();
+            update_option('sixlab_rewrite_rules_flushed', SIXLAB_PLUGIN_VERSION);
+        }
+    }
+    
+    /**
+     * Add query vars
+     */
+    public function add_query_vars($vars) {
+        $vars[] = 'sixlab_page';
+        $vars[] = 'session';
+        $vars[] = 'template';
+        return $vars;
+    }
+    
+    /**
+     * Template redirect for custom pages
+     */
+    public function template_redirect() {
+        $sixlab_page = get_query_var('sixlab_page');
+        
+        if (!$sixlab_page) {
+            return;
+        }
+        
+        switch ($sixlab_page) {
+            case 'workspace':
+                $this->load_workspace_template();
+                break;
+            case 'preview':
+                $this->load_preview_template();
+                break;
+            case 'progress':
+                $this->load_progress_template();
+                break;
+        }
+    }
+    
+    /**
+     * Load workspace template
+     */
+    private function load_workspace_template() {
+        $session_id = get_query_var('session');
+        
+        // Fallback to $_GET if query var is not working
+        if (!$session_id && isset($_GET['session'])) {
+            $session_id = sanitize_text_field($_GET['session']);
+        }
+        
+        if (!$session_id) {
+            wp_die(__('No session specified.', 'sixlab-tool'));
+        }
+        
+        include SIXLAB_PLUGIN_DIR . 'public/templates/enhanced-lab-interface.php';
+        exit;
+    }
+    
+    /**
+     * Load preview template
+     */
+    private function load_preview_template() {
+        $template_id = get_query_var('template');
+        
+        // Fallback to $_GET if query var is not working
+        if (!$template_id && isset($_GET['template'])) {
+            $template_id = sanitize_text_field($_GET['template']);
+        }
+        
+        if (!$template_id) {
+            wp_die(__('No template specified.', 'sixlab-tool'));
+        }
+        
+        // Create a minimal preview interface
+        include SIXLAB_PLUGIN_DIR . 'public/templates/preview-interface.php';
+        exit;
+    }
+    
+    /**
+     * Load progress template
+     */
+    private function load_progress_template() {
+        // Create a dedicated progress page
+        include SIXLAB_PLUGIN_DIR . 'public/templates/standalone-progress.php';
+        exit;
     }
 }

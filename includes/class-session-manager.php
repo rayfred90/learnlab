@@ -55,9 +55,14 @@ class SixLab_Session_Manager {
             return new WP_Error('invalid_user', __('Invalid user ID', 'sixlab-tool'));
         }
         
-        // Validate lab template
-        $lab_template = get_post($lab_id);
-        if (!$lab_template || $lab_template->post_type !== 'sixlab_template') {
+        // Validate lab template from database table
+        $templates_table = $wpdb->prefix . 'sixlab_lab_templates';
+        $lab_template = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$templates_table} WHERE id = %d AND is_active = 1",
+            $lab_id
+        ));
+        
+        if (!$lab_template) {
             return new WP_Error('invalid_lab', __('Invalid lab template ID', 'sixlab-tool'));
         }
         
@@ -83,15 +88,13 @@ class SixLab_Session_Manager {
             return $provider;
         }
         
-        // Get lab template data
-        $template_data = get_post_meta($lab_id, 'sixlab_template_data', true);
-        if (!$template_data) {
-            return new WP_Error('invalid_template_data', __('Lab template data not found', 'sixlab-tool'));
-        }
-        
-        $template_data = json_decode($template_data, true);
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            return new WP_Error('invalid_template_json', __('Lab template data is invalid JSON', 'sixlab-tool'));
+        // Get lab template data from the database table
+        $template_data = array();
+        if (!empty($lab_template->template_data)) {
+            $template_data = json_decode($lab_template->template_data, true);
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                return new WP_Error('invalid_template_json', __('Lab template data is invalid JSON', 'sixlab-tool'));
+            }
         }
         
         // Create provider session
@@ -157,6 +160,25 @@ class SixLab_Session_Manager {
         return $session_data;
     }
     
+    /**
+     * Start a new lab session (alias for create_session with simplified parameters)
+     * 
+     * @param int $user_id User ID
+     * @param int $template_id Lab template ID
+     * @param string $provider_type Provider type
+     * @return string|WP_Error Session ID or error
+     */
+    public function start_session($user_id, $template_id, $provider_type = null) {
+        $result = $this->create_session($user_id, $template_id, $provider_type);
+        
+        if (is_wp_error($result)) {
+            // Throw exception to be caught by the AJAX handler
+            throw new Exception($result->get_error_message());
+        }
+        
+        return $result['id'];
+    }
+
     /**
      * Get session by ID
      * 

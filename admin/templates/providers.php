@@ -43,7 +43,11 @@ if (!defined('ABSPATH')) {
                         <?php
                         try {
                             $temp_provider = new $provider_class();
-                            $is_configured = isset($configured_providers[$provider_type]) && !empty($configured_providers[$provider_type]);
+                            $provider_configs = $configured_providers[$provider_type] ?? array();
+                            $is_configured = !empty($provider_configs);
+                            $active_configs = array_filter($provider_configs, function($config) { return $config['is_active']; });
+                            $config_count = count($provider_configs);
+                            $active_count = count($active_configs);
                         } catch (Throwable $e) {
                             continue;
                         }
@@ -51,9 +55,20 @@ if (!defined('ABSPATH')) {
                         <div class="sixlab-provider-card">
                             <div class="sixlab-provider-header">
                                 <h3><?php echo esc_html($temp_provider->get_display_name()); ?></h3>
-                                <span class="sixlab-provider-status <?php echo $is_configured ? 'configured' : 'not-configured'; ?>">
-                                    <?php echo $is_configured ? __('Configured', 'sixlab-tool') : __('Not Configured', 'sixlab-tool'); ?>
-                                </span>
+                                <div class="sixlab-provider-status-info">
+                                    <span class="sixlab-provider-status <?php echo $is_configured ? 'configured' : 'not-configured'; ?>">
+                                        <?php if ($is_configured): ?>
+                                            <?php printf(__('%d Configuration(s)', 'sixlab-tool'), $config_count); ?>
+                                        <?php else: ?>
+                                            <?php _e('Not Configured', 'sixlab-tool'); ?>
+                                        <?php endif; ?>
+                                    </span>
+                                    <?php if ($is_configured && $active_count > 0): ?>
+                                        <span class="sixlab-active-count">
+                                            <?php printf(__('%d Active', 'sixlab-tool'), $active_count); ?>
+                                        </span>
+                                    <?php endif; ?>
+                                </div>
                             </div>
                             
                             <p class="sixlab-provider-description">
@@ -94,14 +109,20 @@ if (!defined('ABSPATH')) {
                             
                             <div class="sixlab-provider-actions">
                                 <a href="?page=sixlab-providers&tab=<?php echo esc_attr($provider_type); ?>" class="button button-primary">
-                                    <?php echo $is_configured ? __('Configure', 'sixlab-tool') : __('Setup', 'sixlab-tool'); ?>
+                                    <?php echo $is_configured ? __('Manage', 'sixlab-tool') : __('Setup', 'sixlab-tool'); ?>
                                 </a>
                                 
                                 <?php if ($is_configured): ?>
-                                    <button type="button" class="button button-secondary sixlab-test-provider" 
-                                            data-provider="<?php echo esc_attr($provider_type); ?>">
-                                        <?php _e('Test Connection', 'sixlab-tool'); ?>
-                                    </button>
+                                    <a href="?page=sixlab-providers&tab=<?php echo esc_attr($provider_type); ?>&action=add" class="button button-secondary">
+                                        <?php _e('Add New', 'sixlab-tool'); ?>
+                                    </a>
+                                    
+                                    <?php if ($active_count > 0): ?>
+                                        <button type="button" class="button button-secondary sixlab-test-provider" 
+                                                data-provider="<?php echo esc_attr($provider_type); ?>">
+                                            <?php _e('Test Default', 'sixlab-tool'); ?>
+                                        </button>
+                                    <?php endif; ?>
                                 <?php endif; ?>
                             </div>
                         </div>
@@ -110,12 +131,15 @@ if (!defined('ABSPATH')) {
             </div>
             
         <?php else: ?>
-            <!-- Provider-specific configuration form -->
+            <!-- Provider-specific configuration management -->
             <?php if (isset($available_providers[$active_tab])): ?>
                 <?php
                 $provider_class = $available_providers[$active_tab];
                 try {
                     $provider = new $provider_class();
+                    $provider_configs = $configured_providers[$active_tab] ?? array();
+                    $is_adding_new = isset($_GET['action']) && $_GET['action'] === 'add';
+                    $editing_id = isset($_GET['edit']) ? intval($_GET['edit']) : null;
                 } catch (Throwable $e) {
                     echo '<div class="notice notice-error"><p>' . 
                          sprintf(__('Error loading provider: %s', 'sixlab-tool'), $e->getMessage()) . 
@@ -130,31 +154,170 @@ if (!defined('ABSPATH')) {
                         <p><?php echo esc_html($provider->get_description()); ?></p>
                     </div>
                     
-                    <form method="post" action="">
-                        <?php wp_nonce_field('sixlab_providers_nonce'); ?>
-                        
-                        <table class="form-table">
-                            <?php
-                            $config_fields = $provider->get_config_fields();
-                            $current_config = $configured_providers[$active_tab] ?? array();
+                    <?php if (!$is_adding_new && !$editing_id): ?>
+                        <!-- List existing configurations -->
+                        <div class="sixlab-configurations-list">
+                            <div class="sixlab-configurations-header">
+                                <h3><?php _e('Existing Configurations', 'sixlab-tool'); ?></h3>
+                                <a href="?page=sixlab-providers&tab=<?php echo esc_attr($active_tab); ?>&action=add" class="button button-primary">
+                                    <?php _e('Add New Configuration', 'sixlab-tool'); ?>
+                                </a>
+                            </div>
                             
-                            foreach ($config_fields as $field_name => $field_config):
-                                $field_value = $current_config[$field_name] ?? ($field_config['default'] ?? '');
-                                $field_id = $active_tab . '_' . $field_name;
-                                $field_name_attr = "sixlab_providers_config[{$active_tab}][{$field_name}]";
-                            ?>
-                                <tr>
-                                    <th scope="row">
-                                        <label for="<?php echo esc_attr($field_id); ?>">
-                                            <?php echo esc_html($field_config['label']); ?>
-                                            <?php if (!empty($field_config['required'])): ?>
-                                                <span class="required">*</span>
-                                            <?php endif; ?>
-                                        </label>
-                                    </th>
-                                    <td>
-                                        <?php
-                                        $field_type = $field_config['type'] ?? 'text';
+                            <?php if (!empty($provider_configs)): ?>
+                                <div class="sixlab-provider-instances">
+                                    <?php foreach ($provider_configs as $config): ?>
+                                        <div class="sixlab-provider-instance <?php echo $config['is_active'] ? 'active' : 'inactive'; ?>">
+                                            <div class="sixlab-instance-header">
+                                                <h4><?php echo esc_html($config['display_name']); ?></h4>
+                                                <div class="sixlab-instance-badges">
+                                                    <?php if ($config['is_default']): ?>
+                                                        <span class="badge default"><?php _e('Default', 'sixlab-tool'); ?></span>
+                                                    <?php endif; ?>
+                                                    
+                                                    <span class="badge <?php echo $config['is_active'] ? 'active' : 'inactive'; ?>">
+                                                        <?php echo $config['is_active'] ? __('Active', 'sixlab-tool') : __('Inactive', 'sixlab-tool'); ?>
+                                                    </span>
+                                                    
+                                                    <?php if ($config['health_status']): ?>
+                                                        <span class="badge health <?php echo esc_attr($config['health_status']); ?>">
+                                                            <?php echo esc_html(ucfirst($config['health_status'])); ?>
+                                                        </span>
+                                                    <?php endif; ?>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="sixlab-instance-info">
+                                                <p><strong><?php _e('Name:', 'sixlab-tool'); ?></strong> <?php echo esc_html($config['name']); ?></p>
+                                                <?php if (!empty($config['config']['server_url'])): ?>
+                                                    <p><strong><?php _e('Server URL:', 'sixlab-tool'); ?></strong> <?php echo esc_html($config['config']['server_url']); ?></p>
+                                                <?php endif; ?>
+                                                
+                                                <?php if ($config['health_message']): ?>
+                                                    <p class="health-message"><strong><?php _e('Status:', 'sixlab-tool'); ?></strong> <?php echo esc_html($config['health_message']); ?></p>
+                                                <?php endif; ?>
+                                                
+                                                <?php if ($config['last_health_check']): ?>
+                                                    <p class="last-check"><strong><?php _e('Last Check:', 'sixlab-tool'); ?></strong> <?php echo esc_html(date('Y-m-d H:i:s', strtotime($config['last_health_check']))); ?></p>
+                                                <?php endif; ?>
+                                            </div>
+                                            
+                                            <div class="sixlab-instance-actions">
+                                                <a href="?page=sixlab-providers&tab=<?php echo esc_attr($active_tab); ?>&edit=<?php echo esc_attr($config['id']); ?>" class="button button-secondary">
+                                                    <?php _e('Edit', 'sixlab-tool'); ?>
+                                                </a>
+                                                
+                                                <button type="button" class="button button-secondary sixlab-test-single-provider" 
+                                                        data-provider-id="<?php echo esc_attr($config['id']); ?>"
+                                                        data-provider-type="<?php echo esc_attr($active_tab); ?>">
+                                                    <?php _e('Test Connection', 'sixlab-tool'); ?>
+                                                </button>
+                                                
+                                                <?php if (!$config['is_default']): ?>
+                                                    <button type="button" class="button button-link sixlab-set-default-provider" 
+                                                            data-provider-id="<?php echo esc_attr($config['id']); ?>">
+                                                        <?php _e('Set as Default', 'sixlab-tool'); ?>
+                                                    </button>
+                                                <?php endif; ?>
+                                                
+                                                <button type="button" class="button button-link-delete sixlab-delete-provider" 
+                                                        data-provider-id="<?php echo esc_attr($config['id']); ?>"
+                                                        data-provider-name="<?php echo esc_attr($config['display_name']); ?>">
+                                                    <?php _e('Delete', 'sixlab-tool'); ?>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+                            <?php else: ?>
+                                <div class="sixlab-no-configurations">
+                                    <p><?php _e('No configurations found for this provider type.', 'sixlab-tool'); ?></p>
+                                    <a href="?page=sixlab-providers&tab=<?php echo esc_attr($active_tab); ?>&action=add" class="button button-primary">
+                                        <?php _e('Create First Configuration', 'sixlab-tool'); ?>
+                                    </a>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                        
+                    <?php else: ?>
+                        <!-- Add/Edit configuration form -->
+                        <?php
+                        $current_config = array();
+                        $is_editing = false;
+                        
+                        if ($editing_id) {
+                            $is_editing = true;
+                            foreach ($provider_configs as $config) {
+                                if ($config['id'] == $editing_id) {
+                                    $current_config = $config['config'];
+                                    break;
+                                }
+                            }
+                        }
+                        ?>
+                        
+                        <div class="sixlab-configuration-form">
+                            <div class="sixlab-form-header">
+                                <h3><?php echo $is_editing ? __('Edit Configuration', 'sixlab-tool') : __('Add New Configuration', 'sixlab-tool'); ?></h3>
+                                <a href="?page=sixlab-providers&tab=<?php echo esc_attr($active_tab); ?>" class="button button-secondary">
+                                    <?php _e('← Back to List', 'sixlab-tool'); ?>
+                                </a>
+                            </div>
+                            
+                            <form method="post" action="" id="sixlab-provider-form">
+                                <?php wp_nonce_field('sixlab_providers_nonce'); ?>
+                                <input type="hidden" name="provider_type" value="<?php echo esc_attr($active_tab); ?>" />
+                                <?php if ($is_editing): ?>
+                                    <input type="hidden" name="provider_id" value="<?php echo esc_attr($editing_id); ?>" />
+                                <?php endif; ?>
+                                
+                                <table class="form-table">
+                                    <!-- Configuration Name -->
+                                    <tr>
+                                        <th scope="row">
+                                            <label for="provider_name"><?php _e('Configuration Name', 'sixlab-tool'); ?> <span class="required">*</span></label>
+                                        </th>
+                                        <td>
+                                            <input type="text" id="provider_name" name="provider_name" 
+                                                   value="<?php echo $is_editing ? esc_attr($config['name'] ?? '') : ''; ?>" 
+                                                   class="regular-text" required />
+                                            <p class="description"><?php _e('A unique name to identify this configuration', 'sixlab-tool'); ?></p>
+                                        </td>
+                                    </tr>
+                                    
+                                    <!-- Display Name -->
+                                    <tr>
+                                        <th scope="row">
+                                            <label for="provider_display_name"><?php _e('Display Name', 'sixlab-tool'); ?> <span class="required">*</span></label>
+                                        </th>
+                                        <td>
+                                            <input type="text" id="provider_display_name" name="provider_display_name" 
+                                                   value="<?php echo $is_editing ? esc_attr($config['display_name'] ?? '') : ''; ?>" 
+                                                   class="regular-text" required />
+                                            <p class="description"><?php _e('Name shown to users', 'sixlab-tool'); ?></p>
+                                        </td>
+                                    </tr>
+                                    
+                                    <?php
+                                    $config_fields = $provider->get_config_fields();
+                                    
+                                    foreach ($config_fields as $field_name => $field_config):
+                                        $field_value = $current_config[$field_name] ?? ($field_config['default'] ?? '');
+                                        $field_id = $active_tab . '_' . $field_name;
+                                        $field_name_attr = "provider_config[{$field_name}]";
+                                    ?>
+                                        <tr>
+                                            <th scope="row">
+                                                <label for="<?php echo esc_attr($field_id); ?>">
+                                                    <?php echo esc_html($field_config['label']); ?>
+                                                    <?php if (!empty($field_config['required'])): ?>
+                                                        <span class="required">*</span>
+                                                    <?php endif; ?>
+                                                </label>
+                                            </th>
+                                            <td>
+                                                <?php
+                                                $field_type = $field_config['type'] ?? 'text';
                                         
                                         switch ($field_type):
                                             case 'text':
@@ -256,8 +419,12 @@ if (!defined('ABSPATH')) {
                     </form>
                 </div>
             <?php endif; ?>
+        <?php else: ?>
+            <div class="notice notice-error">
+                <p><?php _e('Provider type not found.', 'sixlab-tool'); ?></p>
+            </div>
         <?php endif; ?>
-    </div>
+    <?php endif; ?>
 </div>
 
 <style>
@@ -408,19 +575,144 @@ if (!defined('ABSPATH')) {
 
 <script>
 jQuery(document).ready(function($) {
-    $('.sixlab-test-provider').on('click', function() {
+    
+    // Handle test connection for individual provider instances (Image 1 scenario)
+    $('.sixlab-test-single-provider').on('click', function(e) {
+        e.preventDefault();
+        
+        var button = $(this);
+        var providerId = button.data('provider-id');
+        var providerType = button.data('provider-type');
+        var originalText = button.text();
+        
+        // Find or create result div for this specific provider instance
+        var $instance = button.closest('.sixlab-provider-instance');
+        var $resultDiv = $instance.find('.sixlab-test-result');
+        
+        if ($resultDiv.length === 0) {
+            $resultDiv = $('<div class="sixlab-test-result"></div>');
+            button.closest('.sixlab-instance-actions').after($resultDiv);
+        }
+        
+        button.prop('disabled', true).text('Testing...');
+        $resultDiv.hide();
+        
+        $.ajax({
+            url: typeof sixlab_admin !== 'undefined' ? sixlab_admin.ajax_url : '/wp-admin/admin-ajax.php',
+            type: 'POST',
+            data: {
+                action: 'sixlab_test_provider_by_id',
+                provider_id: providerId,
+                nonce: typeof sixlab_admin !== 'undefined' ? sixlab_admin.nonce : ''
+            },
+            success: function(response) {
+                if (response.success) {
+                    var result = response.data;
+                    $resultDiv.removeClass('error').addClass('success')
+                           .html('<strong>✓ Test Success:</strong> ' + result.message)
+                           .show();
+                } else {
+                    var errorMessage = response.data && response.data.message ? response.data.message : 'Connection test failed';
+                    $resultDiv.removeClass('success').addClass('error')
+                           .html('<strong>✗ Test Failed:</strong> ' + errorMessage)
+                           .show();
+                }
+            },
+            error: function() {
+                $resultDiv.removeClass('success').addClass('error')
+                       .html('<strong>✗ Error:</strong> Connection test failed')
+                       .show();
+            },
+            complete: function() {
+                button.prop('disabled', false).text(originalText);
+                
+                // Auto-hide after 5 seconds
+                setTimeout(function() {
+                    $resultDiv.fadeOut();
+                }, 5000);
+            }
+        });
+    });
+    
+    // Handle test connection for overview cards (Image 2 scenario)
+    $('.sixlab-test-provider').on('click', function(e) {
+        e.preventDefault();
+        
+        var button = $(this);
+        var provider = button.data('provider');
+        var originalText = button.text();
+        
+        // Find or create result div for this provider card
+        var $card = button.closest('.sixlab-provider-card');
+        var $resultDiv = $card.find('.sixlab-test-result');
+        
+        if ($resultDiv.length === 0) {
+            $resultDiv = $('<div class="sixlab-test-result"></div>');
+            button.closest('.sixlab-provider-actions').after($resultDiv);
+        }
+        
+        button.prop('disabled', true).text('Testing...');
+        $resultDiv.hide();
+        
+        // For overview cards, test the default provider configuration
+        $.ajax({
+            url: typeof sixlab_admin !== 'undefined' ? sixlab_admin.ajax_url : '/wp-admin/admin-ajax.php',
+            type: 'POST',
+            data: {
+                action: 'sixlab_test_default_provider',
+                provider_type: provider,
+                nonce: typeof sixlab_admin !== 'undefined' ? sixlab_admin.nonce : ''
+            },
+            success: function(response) {
+                if (response.success) {
+                    var result = response.data;
+                    $resultDiv.removeClass('error').addClass('success')
+                           .html('<strong>✓ Test Success:</strong> ' + result.message)
+                           .show();
+                } else {
+                    var errorMessage = response.data && response.data.message ? response.data.message : 'Connection test failed';
+                    $resultDiv.removeClass('success').addClass('error')
+                           .html('<strong>✗ Test Failed:</strong> ' + errorMessage)
+                           .show();
+                }
+            },
+            error: function() {
+                $resultDiv.removeClass('success').addClass('error')
+                       .html('<strong>✗ Error:</strong> Connection test failed')
+                       .show();
+            },
+            complete: function() {
+                button.prop('disabled', false).text(originalText);
+                
+                // Auto-hide after 5 seconds
+                setTimeout(function() {
+                    $resultDiv.fadeOut();
+                }, 5000);
+            }
+        });
+    });
+    
+    // Handle test connection in configuration forms
+    $('.sixlab-test-provider').on('click', function(e) {
+        // Only handle if this is in a form context
+        if (!$(this).closest('form').length) {
+            return; // Let the overview card handler take care of it
+        }
+        
+        e.preventDefault();
+        
         var button = $(this);
         var provider = button.data('provider');
         var resultDiv = $('#sixlab-test-result');
         
-        button.prop('disabled', true).text(sixlab_admin.strings.testing);
+        button.prop('disabled', true).text('Testing...');
         resultDiv.hide();
         
-        // Collect current configuration
+        // Collect current configuration from form
         var config = {};
-        $('input[name^="sixlab_providers_config[' + provider + ']"], select[name^="sixlab_providers_config[' + provider + ']"], textarea[name^="sixlab_providers_config[' + provider + ']"]').each(function() {
+        $('input[name^="provider_config["], select[name^="provider_config["], textarea[name^="provider_config["]').each(function() {
             var name = $(this).attr('name');
-            var matches = name.match(/\[([^\]]+)\]$/);
+            var matches = name.match(/provider_config\[([^\]]+)\]/);
             if (matches) {
                 var fieldName = matches[1];
                 if ($(this).attr('type') === 'checkbox') {
@@ -432,33 +724,34 @@ jQuery(document).ready(function($) {
         });
         
         $.ajax({
-            url: sixlab_admin.ajax_url,
+            url: typeof sixlab_admin !== 'undefined' ? sixlab_admin.ajax_url : '/wp-admin/admin-ajax.php',
             type: 'POST',
             data: {
                 action: 'sixlab_test_provider',
                 provider_type: provider,
                 config: config,
-                nonce: sixlab_admin.nonce
+                nonce: typeof sixlab_admin !== 'undefined' ? sixlab_admin.nonce : ''
             },
             success: function(response) {
                 if (response.success) {
                     var result = response.data;
                     resultDiv.removeClass('error').addClass('success')
-                           .html('<strong>' + sixlab_admin.strings.test_success + '</strong> ' + result.message)
+                           .html('<strong>✓ Test Success:</strong> ' + result.message)
                            .show();
                 } else {
+                    var errorMessage = response.data && response.data.message ? response.data.message : 'Connection test failed';
                     resultDiv.removeClass('success').addClass('error')
-                           .html('<strong>' + sixlab_admin.strings.test_failed + '</strong> ' + response.data.message)
+                           .html('<strong>✗ Test Failed:</strong> ' + errorMessage)
                            .show();
                 }
             },
             error: function() {
                 resultDiv.removeClass('success').addClass('error')
-                       .html('<strong>' + sixlab_admin.strings.error + '</strong> ' + 'Connection test failed')
+                       .html('<strong>✗ Error:</strong> Connection test failed')
                        .show();
             },
             complete: function() {
-                button.prop('disabled', false).text('<?php _e('Test Connection', 'sixlab-tool'); ?>');
+                button.prop('disabled', false).text('Test Connection');
             }
         });
     });

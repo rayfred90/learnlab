@@ -377,7 +377,15 @@ if (!defined('ABSPATH')) {
 
 // Get provider instance
 \$provider = SixLab_Provider_Factory::get_provider('{$provider_type}');
-\$config_fields = \$provider ? \$provider->get_config_fields() : array();
+\$config_fields = array();
+
+if (is_wp_error(\$provider)) {
+    // Show error message if provider failed to load
+    echo '<div class=\"notice notice-error\"><p>' . esc_html(\$provider->get_error_message()) . '</p></div>';
+} else {
+    \$config_fields = \$provider ? \$provider->get_config_fields() : array();
+}
+
 \$current_config = get_option('sixlab_{$provider_type}_config', array());
 ?>
 
@@ -520,20 +528,22 @@ jQuery(document).ready(function(\$) {
         resultDiv.html('');
         
         \$.post(ajaxurl, {
-            action: 'sixlab_test_provider_connection',
-            provider: '{$provider_type}',
-            nonce: '<?php echo wp_create_nonce('sixlab_test_connection'); ?>'
+            action: 'sixlab_test_provider',
+            provider_type: '{$provider_type}',
+            config: {},
+            nonce: '<?php echo wp_create_nonce('sixlab_admin_nonce'); ?>'
         }, function(response) {
             button.prop('disabled', false).text('<?php esc_js_e('Test Connection', 'sixlab-tool'); ?>');
             
             if (response.success) {
-                resultDiv.html('<div class=\"notice notice-success inline\"><p>' + response.data.message + '</p></div>');
+                resultDiv.html('<div class=\"notice notice-success inline\"><p><strong>✓</strong> ' + response.data.message + '</p></div>');
             } else {
-                resultDiv.html('<div class=\"notice notice-error inline\"><p>' + response.data.message + '</p></div>');
+                var errorMessage = response.data && response.data.message ? response.data.message : 'Connection test failed';
+                resultDiv.html('<div class=\"notice notice-error inline\"><p><strong>✗</strong> ' + errorMessage + '</p></div>');
             }
         }).fail(function() {
             button.prop('disabled', false).text('<?php esc_js_e('Test Connection', 'sixlab-tool'); ?>');
-            resultDiv.html('<div class=\"notice notice-error inline\"><p><?php esc_js_e('Connection test failed.', 'sixlab-tool'); ?></p></div>');
+            resultDiv.html('<div class=\"notice notice-error inline\"><p><strong>✗</strong> <?php esc_js_e('Connection test failed. Please check your configuration and try again.', 'sixlab-tool'); ?></p></div>');
         });
     });
 });

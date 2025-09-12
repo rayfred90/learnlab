@@ -87,8 +87,8 @@
                 SixLabAdmin.toggleModal(modalId);
             });
             
-            // Form submissions
-            $(document).on('submit', '.sixlab-form', function(e) {
+            // Form submissions (exclude template forms)
+            $(document).on('submit', '.sixlab-form:not([method="post"])', function(e) {
                 e.preventDefault();
                 SixLabAdmin.handleFormSubmission($(this));
             });
@@ -96,6 +96,33 @@
             // Tooltips
             $('[data-tooltip]').each(function() {
                 $(this).attr('title', $(this).data('tooltip'));
+            });
+            
+            // Shortcode copy functionality
+            $(document).on('click', '.sixlab-copy-shortcode', function(e) {
+                e.preventDefault();
+                SixLabAdmin.copyShortcode($(this));
+            });
+            
+            // Template management handlers
+            $(document).on('click', '.sixlab-delete-template', function(e) {
+                e.preventDefault();
+                SixLabAdmin.deleteTemplate($(this));
+            });
+            
+            $(document).on('click', '.sixlab-activate-template', function(e) {
+                e.preventDefault();
+                SixLabAdmin.toggleTemplateStatus($(this), 'activate');
+            });
+            
+            $(document).on('click', '.sixlab-deactivate-template', function(e) {
+                e.preventDefault();
+                SixLabAdmin.toggleTemplateStatus($(this), 'deactivate');
+            });
+            
+            $(document).on('click', '.sixlab-duplicate-template', function(e) {
+                e.preventDefault();
+                SixLabAdmin.duplicateTemplate($(this));
             });
         },
         
@@ -652,6 +679,515 @@
 
 })(jQuery);
 
+// Provider Management JavaScript
+(function($) {
+    'use strict';
+
+    // Extend SixLabAdmin with provider management functions
+    $.extend(window.SixLabAdmin, {
+        
+        /**
+         * Setup provider actions
+         */
+        setupProviderActions: function() {
+            this.setupProviderTestConnection();
+            this.setupProviderDelete();
+            this.setupProviderSetDefault();
+            this.setupProviderFormValidation();
+        },
+        
+        /**
+         * Setup test connection functionality
+         */
+        setupProviderTestConnection: function() {
+            // Test single provider configuration
+            $(document).on('click', '.sixlab-test-single-provider', function(e) {
+                e.preventDefault();
+                
+                const $button = $(this);
+                const providerId = $button.data('provider-id');
+                const providerType = $button.data('provider-type');
+                
+                SixLabAdmin.testProviderConnection($button, providerId, providerType);
+            });
+            
+            // Test default provider for type
+            $(document).on('click', '.sixlab-test-provider', function(e) {
+                e.preventDefault();
+                
+                const $button = $(this);
+                const providerType = $button.data('provider');
+                
+                SixLabAdmin.testDefaultProviderConnection($button, providerType);
+            });
+        },
+        
+        /**
+         * Test individual provider connection
+         */
+        testProviderConnection: function($button, providerId, providerType) {
+            const originalText = $button.text();
+            const $resultDiv = $button.closest('.sixlab-provider-instance').find('.sixlab-test-result');
+            
+            // Remove existing result div
+            $resultDiv.remove();
+            
+            // Disable button and show loading
+            $button.prop('disabled', true).text('Testing...');
+            
+            $.ajax({
+                url: sixlab_admin.ajax_url,
+                type: 'POST',
+                data: {
+                    action: 'sixlab_test_provider_by_id',
+                    provider_id: providerId,
+                    nonce: sixlab_admin.nonce
+                },
+                success: function(response) {
+                    SixLabAdmin.showTestResult($button, response, originalText);
+                },
+                error: function() {
+                    SixLabAdmin.showTestResult($button, {
+                        success: false,
+                        data: { message: 'Connection test failed. Please try again.' }
+                    }, originalText);
+                }
+            });
+        },
+        
+        /**
+         * Test default provider connection
+         */
+        testDefaultProviderConnection: function($button, providerType) {
+            const originalText = $button.text();
+            const $resultDiv = $button.closest('.sixlab-provider-card').find('.sixlab-test-result');
+            
+            // Remove existing result div
+            $resultDiv.remove();
+            
+            // Disable button and show loading
+            $button.prop('disabled', true).text('Testing...');
+            
+            // Get current configuration from form if available
+            const config = {};
+            $(`input[name^="provider_config["], select[name^="provider_config["], textarea[name^="provider_config["]`).each(function() {
+                const name = $(this).attr('name');
+                const matches = name.match(/provider_config\[([^\]]+)\]/);
+                if (matches) {
+                    const fieldName = matches[1];
+                    if ($(this).attr('type') === 'checkbox') {
+                        config[fieldName] = $(this).is(':checked') ? '1' : '';
+                    } else {
+                        config[fieldName] = $(this).val();
+                    }
+                }
+            });
+            
+            $.ajax({
+                url: sixlab_admin.ajax_url,
+                type: 'POST',
+                data: {
+                    action: 'sixlab_test_provider',
+                    provider_type: providerType,
+                    config: config,
+                    nonce: sixlab_admin.nonce
+                },
+                success: function(response) {
+                    SixLabAdmin.showTestResult($button, response, originalText);
+                },
+                error: function() {
+                    SixLabAdmin.showTestResult($button, {
+                        success: false,
+                        data: { message: 'Connection test failed. Please try again.' }
+                    }, originalText);
+                }
+            });
+        },
+        
+        /**
+         * Show test result
+         */
+        showTestResult: function($button, response, originalText) {
+            $button.prop('disabled', false).text(originalText);
+            
+            const $container = $button.closest('.sixlab-provider-instance, .sixlab-provider-card');
+            let $resultDiv = $container.find('.sixlab-test-result');
+            
+            if ($resultDiv.length === 0) {
+                $resultDiv = $('<div class="sixlab-test-result"></div>');
+                $button.closest('.sixlab-instance-actions, .sixlab-provider-actions').after($resultDiv);
+            }
+            
+            if (response.success) {
+                const result = response.data;
+                $resultDiv.removeClass('error').addClass('success')
+                         .html('<strong>✓</strong> ' + result.message);
+            } else {
+                const errorMessage = response.data && response.data.message ? response.data.message : 'Connection test failed';
+                $resultDiv.removeClass('success').addClass('error')
+                         .html('<strong>✗</strong> ' + errorMessage);
+            }
+            
+            $resultDiv.show();
+            
+            // Auto-hide after 5 seconds
+            setTimeout(function() {
+                $resultDiv.fadeOut();
+            }, 5000);
+        },
+        
+        /**
+         * Setup provider deletion
+         */
+        setupProviderDelete: function() {
+            $(document).on('click', '.sixlab-delete-provider', function(e) {
+                e.preventDefault();
+                
+                const $button = $(this);
+                const providerId = $button.data('provider-id');
+                const providerName = $button.data('provider-name');
+                
+                if (confirm(`Are you sure you want to delete the provider configuration "${providerName}"? This action cannot be undone.`)) {
+                    SixLabAdmin.deleteProvider(providerId, $button);
+                }
+            });
+        },
+        
+        /**
+         * Delete provider configuration
+         */
+        deleteProvider: function(providerId, $button) {
+            const $instance = $button.closest('.sixlab-provider-instance');
+            
+            $button.prop('disabled', true).text('Deleting...');
+            
+            $.ajax({
+                url: sixlab_admin.ajax_url,
+                type: 'POST',
+                data: {
+                    action: 'sixlab_delete_provider',
+                    provider_id: providerId,
+                    nonce: sixlab_admin.nonce
+                },
+                success: function(response) {
+                    if (response.success) {
+                        $instance.fadeOut(300, function() {
+                            $(this).remove();
+                            
+                            // Check if this was the last provider
+                            if ($('.sixlab-provider-instance').length === 0) {
+                                location.reload(); // Reload to show "no configurations" message
+                            }
+                        });
+                    } else {
+                        alert('Failed to delete provider: ' + (response.data.message || 'Unknown error'));
+                        $button.prop('disabled', false).text('Delete');
+                    }
+                },
+                error: function() {
+                    alert('Failed to delete provider. Please try again.');
+                    $button.prop('disabled', false).text('Delete');
+                }
+            });
+        },
+        
+        /**
+         * Setup set as default functionality
+         */
+        setupProviderSetDefault: function() {
+            $(document).on('click', '.sixlab-set-default-provider', function(e) {
+                e.preventDefault();
+                
+                const $button = $(this);
+                const providerId = $button.data('provider-id');
+                
+                SixLabAdmin.setDefaultProvider(providerId, $button);
+            });
+        },
+        
+        /**
+         * Set provider as default
+         */
+        setDefaultProvider: function(providerId, $button) {
+            $button.prop('disabled', true).text('Setting...');
+            
+            $.ajax({
+                url: sixlab_admin.ajax_url,
+                type: 'POST',
+                data: {
+                    action: 'sixlab_set_default_provider',
+                    provider_id: providerId,
+                    nonce: sixlab_admin.nonce
+                },
+                success: function(response) {
+                    if (response.success) {
+                        // Remove all existing default badges
+                        $('.badge.default').remove();
+                        
+                        // Add default badge to current provider
+                        const $badges = $button.closest('.sixlab-provider-instance').find('.sixlab-instance-badges');
+                        $badges.prepend('<span class="badge default">Default</span>');
+                        
+                        // Hide the "Set as Default" button
+                        $button.hide();
+                        
+                        // Show other "Set as Default" buttons
+                        $('.sixlab-set-default-provider').not($button).show();
+                    } else {
+                        alert('Failed to set as default: ' + (response.data.message || 'Unknown error'));
+                    }
+                    $button.prop('disabled', false).text('Set as Default');
+                },
+                error: function() {
+                    alert('Failed to set as default. Please try again.');
+                    $button.prop('disabled', false).text('Set as Default');
+                }
+            });
+        },
+        
+        /**
+         * Setup form validation
+         */
+        setupProviderFormValidation: function() {
+            $('#sixlab-provider-form').on('submit', function(e) {
+                const $form = $(this);
+                let isValid = true;
+                
+                // Check required fields
+                $form.find('input[required], select[required], textarea[required]').each(function() {
+                    const $field = $(this);
+                    if (!$field.val().trim()) {
+                        $field.addClass('error');
+                        isValid = false;
+                    } else {
+                        $field.removeClass('error');
+                    }
+                });
+                
+                // Validate URLs
+                $form.find('input[type="url"]').each(function() {
+                    const $field = $(this);
+                    const url = $field.val().trim();
+                    
+                    if (url && !SixLabAdmin.isValidUrl(url)) {
+                        $field.addClass('error');
+                        isValid = false;
+                    } else {
+                        $field.removeClass('error');
+                    }
+                });
+                
+                if (!isValid) {
+                    e.preventDefault();
+                    alert('Please fill in all required fields with valid values.');
+                }
+            });
+        },
+        
+        /**
+         * Validate URL
+         */
+        isValidUrl: function(string) {
+            try {
+                new URL(string);
+                return true;
+            } catch (_) {
+                return false;
+            }
+        },
+        
+        /**
+         * Copy shortcode to clipboard
+         */
+        copyShortcode: function($button) {
+            const shortcode = $button.data('shortcode');
+            
+            if (!shortcode) {
+                return;
+            }
+            
+            // Try to use the modern clipboard API
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(shortcode).then(function() {
+                    SixLabAdmin.showCopySuccess($button);
+                }).catch(function() {
+                    // Fallback to older method
+                    SixLabAdmin.fallbackCopyShortcode(shortcode, $button);
+                });
+            } else {
+                // Fallback for older browsers
+                SixLabAdmin.fallbackCopyShortcode(shortcode, $button);
+            }
+        },
+        
+        /**
+         * Fallback copy method for older browsers
+         */
+        fallbackCopyShortcode: function(shortcode, $button) {
+            const $temp = $('<textarea>');
+            $('body').append($temp);
+            $temp.val(shortcode).select();
+            
+            try {
+                document.execCommand('copy');
+                SixLabAdmin.showCopySuccess($button);
+            } catch (err) {
+                console.error('Could not copy shortcode: ', err);
+                alert('Shortcode: ' + shortcode + '\n\nPlease copy manually.');
+            }
+            
+            $temp.remove();
+        },
+        
+        /**
+         * Show copy success animation
+         */
+        showCopySuccess: function($button) {
+            const originalContent = $button.html();
+            
+            $button.addClass('sixlab-copy-success');
+            
+            // Show a brief toast notification
+            this.showToast('Shortcode copied to clipboard!', 'success');
+            
+            setTimeout(function() {
+                $button.removeClass('sixlab-copy-success');
+            }, 1500);
+        },
+        
+        /**
+         * Show toast notification
+         */
+        showToast: function(message, type = 'info') {
+            const $toast = $('<div class="sixlab-toast sixlab-toast-' + type + '">' + message + '</div>');
+            
+            // Add to page if container doesn't exist
+            if ($('.sixlab-toast-container').length === 0) {
+                $('body').append('<div class="sixlab-toast-container"></div>');
+            }
+            
+            $('.sixlab-toast-container').append($toast);
+            
+            // Animate in
+            setTimeout(function() {
+                $toast.addClass('sixlab-toast-show');
+            }, 10);
+            
+            // Remove after 3 seconds
+            setTimeout(function() {
+                $toast.removeClass('sixlab-toast-show');
+                setTimeout(function() {
+                    $toast.remove();
+                }, 300);
+            }, 3000);
+        },
+        
+        /**
+         * Delete template
+         */
+        deleteTemplate: function($button) {
+            const templateId = $button.data('template-id');
+            const templateName = $button.data('template-name');
+            
+            if (!confirm('Are you sure you want to permanently delete the template "' + templateName + '"? This action cannot be undone.')) {
+                return;
+            }
+            
+            $button.prop('disabled', true).text('Deleting...');
+            
+            $.ajax({
+                url: ajaxurl,
+                type: 'POST',
+                data: {
+                    action: 'sixlab_delete_template',
+                    template_id: templateId,
+                    nonce: sixlabAdmin.nonce
+                },
+                success: function(response) {
+                    if (response.success) {
+                        $button.closest('tr').fadeOut(function() {
+                            $(this).remove();
+                        });
+                        SixLabAdmin.showToast('Template deleted successfully', 'success');
+                    } else {
+                        alert('Error deleting template: ' + (response.data.message || 'Unknown error'));
+                        $button.prop('disabled', false).text('Delete');
+                    }
+                },
+                error: function() {
+                    alert('Network error occurred while deleting template');
+                    $button.prop('disabled', false).text('Delete');
+                }
+            });
+        },
+        
+        /**
+         * Toggle template status (activate/deactivate)
+         */
+        toggleTemplateStatus: function($button, action) {
+            const templateId = $button.data('template-id');
+            const isActivating = action === 'activate';
+            
+            $button.prop('disabled', true).text(isActivating ? 'Activating...' : 'Deactivating...');
+            
+            $.ajax({
+                url: ajaxurl,
+                type: 'POST',
+                data: {
+                    action: 'sixlab_toggle_template_status',
+                    template_id: templateId,
+                    status: action,
+                    nonce: sixlabAdmin.nonce
+                },
+                success: function(response) {
+                    if (response.success) {
+                        location.reload(); // Reload to update the interface
+                    } else {
+                        alert('Error updating template status: ' + (response.data.message || 'Unknown error'));
+                        $button.prop('disabled', false).text(isActivating ? 'Activate' : 'Deactivate');
+                    }
+                },
+                error: function() {
+                    alert('Network error occurred while updating template status');
+                    $button.prop('disabled', false).text(isActivating ? 'Activate' : 'Deactivate');
+                }
+            });
+        },
+        
+        /**
+         * Duplicate template
+         */
+        duplicateTemplate: function($button) {
+            const templateId = $button.data('template-id');
+            
+            $button.prop('disabled', true).text('Duplicating...');
+            
+            $.ajax({
+                url: ajaxurl,
+                type: 'POST',
+                data: {
+                    action: 'sixlab_duplicate_template',
+                    template_id: templateId,
+                    nonce: sixlabAdmin.nonce
+                },
+                success: function(response) {
+                    if (response.success) {
+                        location.reload(); // Reload to show the duplicated template
+                    } else {
+                        alert('Error duplicating template: ' + (response.data.message || 'Unknown error'));
+                        $button.prop('disabled', false).text('Duplicate');
+                    }
+                },
+                error: function() {
+                    alert('Network error occurred while duplicating template');
+                    $button.prop('disabled', false).text('Duplicate');
+                }
+            });
+        }
+    });
+
+})(jQuery);
+
 // Global functions for onclick handlers
 window.refreshDashboard = function() {
     SixLabAdmin.refreshDashboard();
@@ -665,3 +1201,8 @@ window.updateAIChart = function(timeframe) {
     // Implementation for updating AI chart timeframe
     console.log('Updating AI chart for timeframe:', timeframe);
 };
+
+// Initialize when document is ready
+$(document).ready(function() {
+    SixLabAdmin.init();
+});

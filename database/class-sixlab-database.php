@@ -379,8 +379,60 @@ class SixLab_Database {
             self::create_tables();
         }
         
+        // Run additional migrations for date/time fields
+        self::run_migration_010();
+        
+        // Run migration for delete/reset scripts
+        self::run_migration_011();
+        
         // Update database version
         update_option('sixlab_db_version', self::DB_VERSION);
+    }
+    
+    /**
+     * Migration 010: Add date/time fields to lab templates
+     */
+    private static function run_migration_010() {
+        global $wpdb;
+        
+        $table_name = $wpdb->prefix . 'sixlab_lab_templates';
+        
+        // Check if columns already exist
+        $columns = $wpdb->get_results("SHOW COLUMNS FROM {$table_name} LIKE 'lab_start_date'");
+        
+        if (empty($columns)) {
+            // Add new columns
+            $wpdb->query("ALTER TABLE {$table_name} 
+                ADD COLUMN lab_start_date DATE NULL AFTER estimated_duration,
+                ADD COLUMN lab_start_time TIME NULL AFTER lab_start_date,
+                ADD COLUMN lab_end_date DATE NULL AFTER lab_start_time,
+                ADD COLUMN lab_end_time TIME NULL AFTER lab_end_date");
+            
+            // Add index
+            $wpdb->query("CREATE INDEX idx_lab_schedule ON {$table_name}(lab_start_date, lab_start_time)");
+        }
+    }
+    
+    /**
+     * Migration 011: Add delete/reset script columns to lab templates
+     */
+    private static function run_migration_011() {
+        global $wpdb;
+        
+        $table_name = $wpdb->prefix . 'sixlab_lab_templates';
+        
+        // Check if columns already exist
+        $columns = $wpdb->get_results("SHOW COLUMNS FROM {$table_name} LIKE 'delete_reset_script'");
+        
+        if (empty($columns)) {
+            // Add new columns
+            $wpdb->query("ALTER TABLE {$table_name} 
+                ADD COLUMN delete_reset_script LONGTEXT NULL AFTER validation_rules,
+                ADD COLUMN guided_delete_reset_script LONGTEXT NULL AFTER delete_reset_script");
+            
+            // Add index for template type queries
+            $wpdb->query("CREATE INDEX idx_lab_template_type ON {$table_name}(template_type)");
+        }
     }
     
     /**

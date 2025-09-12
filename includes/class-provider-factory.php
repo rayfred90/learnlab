@@ -195,10 +195,19 @@ class SixLab_Provider_Factory {
         
         $table_name = $wpdb->prefix . 'sixlab_providers';
         
+        // Get the default provider for this type first
         $provider_data = $wpdb->get_row($wpdb->prepare(
-            "SELECT * FROM {$table_name} WHERE type = %s AND is_active = %d LIMIT 1",
-            $provider_type, 1
+            "SELECT * FROM {$table_name} WHERE type = %s AND is_active = %d AND is_default = %d LIMIT 1",
+            $provider_type, 1, 1
         ));
+        
+        // If no default, get the first active one
+        if (!$provider_data) {
+            $provider_data = $wpdb->get_row($wpdb->prepare(
+                "SELECT * FROM {$table_name} WHERE type = %s AND is_active = %d ORDER BY id ASC LIMIT 1",
+                $provider_type, 1
+            ));
+        }
         
         if (!$provider_data) {
             return new WP_Error(
@@ -208,6 +217,44 @@ class SixLab_Provider_Factory {
         }
         
         return $this->get_provider($provider_data->id);
+    }
+    
+    /**
+     * Get all providers of a specific type
+     * 
+     * @param string $provider_type Provider type
+     * @param bool $active_only Whether to return only active providers
+     * @return array Array of provider instances
+     */
+    public function get_providers_by_type($provider_type, $active_only = true) {
+        global $wpdb;
+        
+        $table_name = $wpdb->prefix . 'sixlab_providers';
+        
+        $where_clause = "WHERE type = %s";
+        $params = array($provider_type);
+        
+        if ($active_only) {
+            $where_clause .= " AND is_active = %d";
+            $params[] = 1;
+        }
+        
+        $providers_data = $wpdb->get_results($wpdb->prepare(
+            "SELECT * FROM {$table_name} {$where_clause} ORDER BY is_default DESC, display_name ASC",
+            $params
+        ));
+        
+        $provider_instances = array();
+        
+        foreach ($providers_data as $provider_data) {
+            $provider = $this->get_provider($provider_data->id);
+            
+            if (!is_wp_error($provider)) {
+                $provider_instances[] = $provider;
+            }
+        }
+        
+        return $provider_instances;
     }
     
     /**
